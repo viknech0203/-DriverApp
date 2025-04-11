@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import AuthScreen from '../src/screens/AuthScreen';
-import MainScreen from '../src/screens/MainScreen';
+import AuthScreen from '../src/AuthScreen';
+import MainScreen from '../src/MainScreen';
 
 export default function Index() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
