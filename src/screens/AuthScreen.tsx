@@ -1,31 +1,36 @@
 import React, { useState } from 'react';
-import { SafeAreaView, Text, TextInput, TouchableOpacity, View, StyleSheet } from 'react-native';
+import { SafeAreaView, Text, TextInput, TouchableOpacity, View, StyleSheet, Alert } from 'react-native';
 
-const AuthScreen: React.FC = () => {
+type Props = {
+  onLoginSuccess: () => void;
+};
+
+const AuthScreen: React.FC<Props> = ({ onLoginSuccess }) => {
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
   const [serverAddress, setServerAddress] = useState('');
 
   const handleLogin = () => {
-    // Логика авторизации
-    console.log('Логин:', login);
-    console.log('Пароль:', password);
-    console.log('Адрес сервера:', serverAddress);
- 
+    if (login === 'driver' && password === '0000' && serverAddress === '0000') {
+      console.log('Успешный вход');
+      onLoginSuccess();
+    } else {
+      Alert.alert('Ошибка', 'Неверные данные для входа');
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.formContainer}>
         <Text style={styles.title}>Авторизация</Text>
-        
+
         <TextInput
           style={styles.input}
           placeholder="Логин"
           value={login}
           onChangeText={setLogin}
         />
-        
+
         <TextInput
           style={styles.input}
           placeholder="Пароль"
@@ -33,14 +38,14 @@ const AuthScreen: React.FC = () => {
           onChangeText={setPassword}
           secureTextEntry
         />
-        
+
         <TextInput
           style={styles.input}
           placeholder="Адрес сервера"
           value={serverAddress}
           onChangeText={setServerAddress}
         />
-        
+
         <TouchableOpacity style={styles.button} onPress={handleLogin}>
           <Text style={styles.buttonText}>Войти</Text>
         </TouchableOpacity>
@@ -55,7 +60,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#f4f4f4', // Цвет фона
+    backgroundColor: '#f4f4f4',
   },
   formContainer: {
     width: '100%',
@@ -67,7 +72,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 6,
-    elevation: 6, // Для Android
+    elevation: 6,
   },
   title: {
     fontSize: 24,
