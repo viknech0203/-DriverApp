@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
+import AppHeader from './AppHeader'; 
 
 type Message = {
   id: string;
@@ -45,6 +46,7 @@ const ChatScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
+        <AppHeader screenName="Чат" status="Активен" driverName="Иванов И.И." />
       <FlatList
         data={messages}
         renderItem={renderItem}
