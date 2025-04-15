@@ -30,7 +30,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ screenName, status, driverName })
 
 const styles = StyleSheet.create({
   header: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#B7C8E1',
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderBottomWidth: 1,

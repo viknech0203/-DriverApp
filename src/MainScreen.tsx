@@ -1,11 +1,20 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
 
 const MainScreen: React.FC = () => {
+    const router = useRouter();
   const handleNavigate = (screenName: string) => {
-    Alert.alert(`Переход к экрану: ${screenName}`);
+    if (screenName === 'Чат') {
+        router.push('/Chat');
+      }  else if (screenName === 'Информация о рейсе') {
+        router.push('/FlightInfo');
+      }  else if (screenName === 'Статус рейса') {
+        router.push('/FlightStatus');
+      }
     
   };
+  
 
   return (
     <SafeAreaView style={styles.container}>
@@ -46,7 +55,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   menuItem: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#779DD6',
     padding: 20,
     borderRadius: 10,
     marginBottom: 20,
