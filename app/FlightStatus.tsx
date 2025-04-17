@@ -10,6 +10,9 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import AppHeader from './AppHeader'; 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEffect } from 'react';
+
 
 const customers = ['ООО Рога и Копыта', 'ИП Иванов', 'АО ПассажирТранс'];
 const statuses = [
@@ -27,12 +30,42 @@ const FlightStatus: React.FC = () => {
     setDate(new Date());
   };
 
-  const handleSubmit = () => {
-    // Здесь можешь отправить данные на сервер
-    console.log('Дата:', date);
-    console.log('Заказчик:', selectedCustomer);
-    console.log('Доп. информация:', info);
+  const handleSubmit = async () => {
+    try {
+      const baseUrl = await AsyncStorage.getItem('base_url');
+      const token = await AsyncStorage.getItem('access_token');
+  
+      if (!baseUrl || !token) {
+        console.log('base_url или токен не найдены');
+        return;
+      }
+  
+      const response = await fetch(`${baseUrl}/set_status`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          date: date.toISOString(),
+          customer: selectedCustomer,
+          info,
+        }),
+      });
+  
+      if (!response.ok) {
+        throw new Error(`Ошибка отправки статуса: ${response.status}`);
+      }
+  
+      const responseData = await response.json();
+      console.log('Ответ сервера:', responseData);
+      // Здесь можно отобразить его на экране или обновить FlatList
+  
+    } catch (error: any) {
+      console.error('Ошибка при отправке статуса:', error.message);
+    }
   };
+  
 
   return (
     <SafeAreaView style={styles.container}>

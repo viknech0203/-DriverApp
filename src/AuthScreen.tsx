@@ -27,7 +27,7 @@ const AuthScreen: React.FC<Props> = ({ onLoginSuccess }) => {
   const handleLogin = async () => {
     try {
       //  хост и порт по ИНН
-      const innResponse = await fetch('https://app.atp-online.ru/driver_app/get_info.php', {
+      const innResponse = await fetch('https://app.atp-online.ru/driver_app/get_host.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ inn }),
@@ -57,6 +57,7 @@ if (authData.token) {
   if (authData.refresh_token) {
     await AsyncStorage.setItem('refresh_token', authData.refresh_token);
   }
+  await AsyncStorage.setItem('base_url', baseUrl);
 
   dispatch(
     setTokens({

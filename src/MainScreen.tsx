@@ -8,7 +8,7 @@ const MainScreen: React.FC = () => {
     if (screenName === 'Чат') {
         router.push('/Chat');
       }  else if (screenName === 'Информация о рейсе') {
-        router.push('/FlightInfo');
+        router.push('/FlightInfoScreen');
       }  else if (screenName === 'Статус рейса') {
         router.push('/FlightStatus');
       }
