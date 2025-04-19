@@ -59,6 +59,10 @@ if (authData.token) {
   }
   await AsyncStorage.setItem('base_url', baseUrl);
 
+  console.log('Access Token:', authData.token);
+  console.log('Refresh Token:', authData.refresh_token);
+
+
   dispatch(
     setTokens({
       accessToken: authData.token,
