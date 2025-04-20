@@ -34,6 +34,7 @@ const FlightStatus: React.FC = () => {
   const [statuses, setStatuses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [raznZakId, setRaznZakId] = useState<string>("");
+  const [driverName, setDriverName] = useState<string>("");
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -61,7 +62,10 @@ const FlightStatus: React.FC = () => {
             client: c.client,
           }))
         );
-        
+
+        if (infoJson.driver?.fio) {
+          setDriverName(infoJson.driver.fio);
+        }
 
         const firstRaznId = infoJson.route?.[0]?.razn_id;
         setRaznId(firstRaznId ? String(firstRaznId) : "");
@@ -71,7 +75,7 @@ const FlightStatus: React.FC = () => {
           headers,
           body: "{}",
         });
-        const dirJson = await dirResp.json();      
+        const dirJson = await dirResp.json();
 
         const trackClients: TrackClient[] = (infoJson.route || [])
           .flatMap((route: any) => route.track || [])
@@ -98,38 +102,37 @@ const FlightStatus: React.FC = () => {
           }))
         );
 
-      
-      // 2) история статусов через razn_zak_id
-const firstTrack = infoJson.route?.[0]?.track?.[0];
-if (firstTrack?.razn_zak_id) {
-  const raznZakIdValue = String(firstTrack.razn_zak_id);
-  setRaznZakId(raznZakIdValue);
+        // 2) история статусов через razn_zak_id
+        const firstTrack = infoJson.route?.[0]?.track?.[0];
+        if (firstTrack?.razn_zak_id) {
+          const raznZakIdValue = String(firstTrack.razn_zak_id);
+          setRaznZakId(raznZakIdValue);
 
-  const historyResp = await fetch(`${baseUrl}/get_status`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ razn_zak_id: raznZakIdValue }),
-  });
-  const historyJson = await historyResp.json();
-  const history = historyJson.status_list || [];
+          const historyResp = await fetch(`${baseUrl}/get_status`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({ razn_zak_id: raznZakIdValue }),
+          });
+          const historyJson = await historyResp.json();
+          const history = historyJson.status_list || [];
 
-  setStatuses(history);
+          setStatuses(history);
 
-  //  Устанавливаем последний применённый статус в selectedStatusId
-  if (history.length > 0) {
-    const lastStatusName = history[0].status;
-    const matched = (dirJson.status_dir || []).find(
-      (s: any) => s.name === lastStatusName
-    );
-    if (matched) {
-      setSelectedStatusId(String(matched.status_id));
-    } else {
-      console.warn(" Не удалось сопоставить статус из истории со справочником.");
-    }
-  }
-}
-
-
+          //  Устанавливаем последний применённый статус в selectedStatusId
+          if (history.length > 0) {
+            const lastStatusName = history[0].status;
+            const matched = (dirJson.status_dir || []).find(
+              (s: any) => s.name === lastStatusName
+            );
+            if (matched) {
+              setSelectedStatusId(String(matched.status_id));
+            } else {
+              console.warn(
+                " Не удалось сопоставить статус из истории со справочником."
+              );
+            }
+          }
+        }
       } catch (e) {
         console.error("Ошибка загрузки initial data:", e);
       } finally {
@@ -194,63 +197,65 @@ if (firstTrack?.razn_zak_id) {
 
   const handleApplyStatus = async () => {
     try {
-      const baseUrl = await AsyncStorage.getItem('base_url');
-      const token = await AsyncStorage.getItem('access_token');
-      if (!baseUrl || !token) throw new Error('Отсутствует токен или URL');
-  
+      const baseUrl = await AsyncStorage.getItem("base_url");
+      const token = await AsyncStorage.getItem("access_token");
+      if (!baseUrl || !token) throw new Error("Отсутствует токен или URL");
+
       const headers = {
         Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       };
-  
+
       const body = {
-        apply_stamp_status: date.toISOString().slice(0, 19).replace('T', ' '),
+        apply_stamp_status: date.toISOString().slice(0, 19).replace("T", " "),
         info,
         status_id: selectedStatusId,
         razn_id: raznId,
         vol,
         client_id: selectedClientId,
       };
-  
-      console.log(' Отправка нового статуса на сервер:');
+
+      console.log(" Отправка нового статуса на сервер:");
       console.log(JSON.stringify(body, null, 2));
-  
+
       const resp = await fetch(`${baseUrl}/set_status`, {
-        method: 'POST',
+        method: "POST",
         headers,
         body: JSON.stringify(body),
       });
-  
+
       const result = await resp.json();
-  
-      console.log(' Ответ от /set_status:');
+
+      console.log(" Ответ от /set_status:");
       console.log(JSON.stringify(result, null, 2));
-  
+
       if (result.status?.code === 0) {
-        console.log(' Статус успешно отправлен. Загружаем историю и справочник...');
-  
+        console.log(
+          " Статус успешно отправлен. Загружаем историю и справочник..."
+        );
+
         // Обновляем историю
         const historyResp = await fetch(`${baseUrl}/get_status`, {
-          method: 'POST',
+          method: "POST",
           headers,
           body: JSON.stringify({ razn_zak_id: raznZakId }),
         });
-  
+
         const historyJson = await historyResp.json();
-        console.log(' История статусов:');
+        console.log(" История статусов:");
         console.log(JSON.stringify(historyJson, null, 2));
         setStatuses(historyJson.status_list || []);
-  
+
         // Обновляем справочник статусов
         const dirResp = await fetch(`${baseUrl}/get_status_dir`, {
-          method: 'POST',
+          method: "POST",
           headers,
-          body: '{}',
+          body: "{}",
         });
         const dirJson = await dirResp.json();
-        console.log(' Обновлённый справочник статусов:');
+        console.log(" Обновлённый справочник статусов:");
         console.log(JSON.stringify(dirJson, null, 2));
-  
+
         setStatusDir(
           (dirJson.status_dir || []).map((s: any) => ({
             status_id: String(s.status_id),
@@ -258,22 +263,20 @@ if (firstTrack?.razn_zak_id) {
           }))
         );
       } else {
-        console.error(' Ошибка при установке статуса:', result.status?.text || 'Неизвестная ошибка');
+        console.error(
+          " Ошибка при установке статуса:",
+          result.status?.text || "Неизвестная ошибка"
+        );
       }
     } catch (e) {
-      console.error(' Ошибка handleApplyStatus:', e);
+      console.error(" Ошибка handleApplyStatus:", e);
     }
   };
-  
-  
 
   return (
     <SafeAreaView style={styles.container}>
-      <AppHeader
-        screenName="Статус рейса"
-        status="Активен"
-        driverName="Иванов И.И."
-      />
+    <AppHeader screenName="Статус рейса" status="Активен" driverName={driverName} />
+
       <ScrollView>
         {/* Дата и время */}
         <Text style={styles.label}>Дата и время</Text>
