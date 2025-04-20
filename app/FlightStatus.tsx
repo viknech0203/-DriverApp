@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,47 +10,50 @@ import {
   ScrollView,
   ActivityIndicator,
   Platform,
-} from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import AppHeader from './AppHeader';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Picker } from '@react-native-picker/picker';
-
+} from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import AppHeader from "./AppHeader";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Picker } from "@react-native-picker/picker";
 
 type TrackClient = { client_id: string; client: string };
-
 
 const FlightStatus: React.FC = () => {
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [statusDir, setStatusDir] = useState<{status_id: string; name: string;}[]>([]);
+  const [statusDir, setStatusDir] = useState<
+    { status_id: string; name: string }[]
+  >([]);
   const [clients, setClients] = useState<TrackClient[]>([]);
-  const [raznId, setRaznId] = useState<string>('');
-  const [dataId, setDataId] = useState<string>('');
-  const [selectedStatusId, setSelectedStatusId] = useState<string>('');
-  const [selectedClientId, setSelectedClientId] = useState<string>('');
-  const [vol, setVol] = useState<string>('');
-  const [info, setInfo] = useState<string>('');
+  const [raznId, setRaznId] = useState<string>("");
+  const [dataId, setDataId] = useState<string>("");
+  const [selectedStatusId, setSelectedStatusId] = useState<string>("");
+  const [selectedClientId, setSelectedClientId] = useState<string>("");
+  const [vol, setVol] = useState<string>("");
+  const [info, setInfo] = useState<string>("");
   const [statuses, setStatuses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [raznZakId, setRaznZakId] = useState<string>("");
 
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const baseUrl = await AsyncStorage.getItem('base_url');
-        const token = await AsyncStorage.getItem('access_token');
-        if (!baseUrl || !token) throw new Error('Нет baseUrl или token');
+        const baseUrl = await AsyncStorage.getItem("base_url");
+        const token = await AsyncStorage.getItem("access_token");
+        if (!baseUrl || !token) throw new Error("Нет baseUrl или token");
 
         const headers = {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         };
 
         // 1) Получаем справочник статусов и клиентов
-        const infoResp = await fetch(`${baseUrl}/get_info`, { method: 'POST', headers, body: '{}' });
+        const infoResp = await fetch(`${baseUrl}/get_info`, {
+          method: "POST",
+          headers,
+          body: "{}",
+        });
         const infoJson = await infoResp.json();
-
-        
 
         setClients(
           (infoJson.clients || []).map((c: any) => ({
@@ -58,31 +61,35 @@ const FlightStatus: React.FC = () => {
             client: c.client,
           }))
         );
-        setRaznId(String(infoJson.razn_id));
-        setDataId(String(infoJson.data_id));
+        
 
-        const dirResp = await fetch(`${baseUrl}/get_status_dir`, { method: 'POST', headers, body: '{}' });
-        const dirJson = await dirResp.json();
+        const firstRaznId = infoJson.route?.[0]?.razn_id;
+        setRaznId(firstRaznId ? String(firstRaznId) : "");
 
+        const dirResp = await fetch(`${baseUrl}/get_status_dir`, {
+          method: "POST",
+          headers,
+          body: "{}",
+        });
+        const dirJson = await dirResp.json();      
 
         const trackClients: TrackClient[] = (infoJson.route || [])
-        .flatMap((route: any) => route.track || [])
-        .filter((t: any) => t.client_id && t.client)
-        .map((t: any) => ({
-          client_id: String(t.client_id),
-          client: t.client,
-        }));
-      
+          .flatMap((route: any) => route.track || [])
+          .filter((t: any) => t.client_id && t.client)
+          .map((t: any) => ({
+            client_id: String(t.client_id),
+            client: t.client,
+          }));
+
         const uniqueClients: TrackClient[] = Array.from(
           new Map(trackClients.map((c) => [c.client_id, c])).values()
         );
-      
-      setClients(uniqueClients);
-      
-      if (uniqueClients.length > 0) {
-        setSelectedClientId(uniqueClients[0].client_id);
-      }
 
+        setClients(uniqueClients);
+
+        if (uniqueClients.length > 0) {
+          setSelectedClientId(uniqueClients[0].client_id);
+        }
 
         setStatusDir(
           (dirJson.status_dir || []).map((s: any) => ({
@@ -91,17 +98,40 @@ const FlightStatus: React.FC = () => {
           }))
         );
 
-        // 2) Получаем историю статусов
-        if (infoJson.razn_id) {
-          const historyResp = await fetch(
-            `${baseUrl}/get_status/${infoJson.razn_id}`,
-            { method: 'POST', headers, body: '{}' }
-          );
-          const historyJson = await historyResp.json();
-          setStatuses(historyJson.status_list || []);
-        }
+      
+      // 2) история статусов через razn_zak_id
+const firstTrack = infoJson.route?.[0]?.track?.[0];
+if (firstTrack?.razn_zak_id) {
+  const raznZakIdValue = String(firstTrack.razn_zak_id);
+  setRaznZakId(raznZakIdValue);
+
+  const historyResp = await fetch(`${baseUrl}/get_status`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ razn_zak_id: raznZakIdValue }),
+  });
+  const historyJson = await historyResp.json();
+  const history = historyJson.status_list || [];
+
+  setStatuses(history);
+
+  //  Устанавливаем последний применённый статус в selectedStatusId
+  if (history.length > 0) {
+    const lastStatusName = history[0].status;
+    const matched = (dirJson.status_dir || []).find(
+      (s: any) => s.name === lastStatusName
+    );
+    if (matched) {
+      setSelectedStatusId(String(matched.status_id));
+    } else {
+      console.warn(" Не удалось сопоставить статус из истории со справочником.");
+    }
+  }
+}
+
+
       } catch (e) {
-        console.error('Ошибка загрузки initial data:', e);
+        console.error("Ошибка загрузки initial data:", e);
       } finally {
         setLoading(false);
       }
@@ -112,19 +142,19 @@ const FlightStatus: React.FC = () => {
 
   const handleSubmit = async () => {
     try {
-      const baseUrl = await AsyncStorage.getItem('base_url');
-      const token = await AsyncStorage.getItem('access_token');
+      const baseUrl = await AsyncStorage.getItem("base_url");
+      const token = await AsyncStorage.getItem("access_token");
       if (!baseUrl || !token) return;
 
       const headers = {
         Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       };
 
       const body = {
-        apply_stamp_status: date.toISOString().slice(0, 19).replace('T', ' '),
+        apply_stamp_status: date.toISOString().slice(0, 19).replace("T", " "),
         status_id: selectedStatusId,
-        client_id: selectedClientId,  // Передаем выбранный client_id
+        client_id: selectedClientId, // Передаем выбранный client_id
         razn_id: raznId,
         vol,
         data_id: dataId,
@@ -132,7 +162,7 @@ const FlightStatus: React.FC = () => {
       };
 
       const resp = await fetch(`${baseUrl}/set_status`, {
-        method: 'POST',
+        method: "POST",
         headers,
         body: JSON.stringify(body),
       });
@@ -140,17 +170,17 @@ const FlightStatus: React.FC = () => {
       if (result.status?.code === 0) {
         // Обновляем историю
         const historyResp = await fetch(`${baseUrl}/get_status/${raznId}`, {
-          method: 'POST',
+          method: "POST",
           headers,
-          body: '{}',
+          body: "{}",
         });
         const historyJson = await historyResp.json();
         setStatuses(historyJson.status_list || []);
       } else {
-        console.error('Ошибка при отправке:', result.status.text);
+        console.error("Ошибка при отправке:", result.status.text);
       }
     } catch (e) {
-      console.error('Ошибка handleSubmit:', e);
+      console.error("Ошибка handleSubmit:", e);
     }
   };
 
@@ -162,17 +192,102 @@ const FlightStatus: React.FC = () => {
     );
   }
 
+  const handleApplyStatus = async () => {
+    try {
+      const baseUrl = await AsyncStorage.getItem('base_url');
+      const token = await AsyncStorage.getItem('access_token');
+      if (!baseUrl || !token) throw new Error('Отсутствует токен или URL');
+  
+      const headers = {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      };
+  
+      const body = {
+        apply_stamp_status: date.toISOString().slice(0, 19).replace('T', ' '),
+        info,
+        status_id: selectedStatusId,
+        razn_id: raznId,
+        vol,
+        client_id: selectedClientId,
+      };
+  
+      console.log(' Отправка нового статуса на сервер:');
+      console.log(JSON.stringify(body, null, 2));
+  
+      const resp = await fetch(`${baseUrl}/set_status`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+      });
+  
+      const result = await resp.json();
+  
+      console.log(' Ответ от /set_status:');
+      console.log(JSON.stringify(result, null, 2));
+  
+      if (result.status?.code === 0) {
+        console.log(' Статус успешно отправлен. Загружаем историю и справочник...');
+  
+        // Обновляем историю
+        const historyResp = await fetch(`${baseUrl}/get_status`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ razn_zak_id: raznZakId }),
+        });
+  
+        const historyJson = await historyResp.json();
+        console.log(' История статусов:');
+        console.log(JSON.stringify(historyJson, null, 2));
+        setStatuses(historyJson.status_list || []);
+  
+        // Обновляем справочник статусов
+        const dirResp = await fetch(`${baseUrl}/get_status_dir`, {
+          method: 'POST',
+          headers,
+          body: '{}',
+        });
+        const dirJson = await dirResp.json();
+        console.log(' Обновлённый справочник статусов:');
+        console.log(JSON.stringify(dirJson, null, 2));
+  
+        setStatusDir(
+          (dirJson.status_dir || []).map((s: any) => ({
+            status_id: String(s.status_id),
+            name: s.name,
+          }))
+        );
+      } else {
+        console.error(' Ошибка при установке статуса:', result.status?.text || 'Неизвестная ошибка');
+      }
+    } catch (e) {
+      console.error(' Ошибка handleApplyStatus:', e);
+    }
+  };
+  
+  
+
   return (
     <SafeAreaView style={styles.container}>
-      <AppHeader screenName="Статус рейса" status="Активен" driverName="Иванов И.И." />
+      <AppHeader
+        screenName="Статус рейса"
+        status="Активен"
+        driverName="Иванов И.И."
+      />
       <ScrollView>
         {/* Дата и время */}
         <Text style={styles.label}>Дата и время</Text>
         <View style={styles.row}>
-          <TouchableOpacity style={styles.inputButton} onPress={() => setShowDatePicker(true)}>
+          <TouchableOpacity
+            style={styles.inputButton}
+            onPress={() => setShowDatePicker(true)}
+          >
             <Text>{date.toLocaleString()}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.nowButton} onPress={() => setDate(new Date())}>
+          <TouchableOpacity
+            style={styles.nowButton}
+            onPress={() => setDate(new Date())}
+          >
             <Text style={styles.nowText}>Сейчас</Text>
           </TouchableOpacity>
         </View>
@@ -180,7 +295,7 @@ const FlightStatus: React.FC = () => {
           <DateTimePicker
             value={date}
             mode="datetime"
-            display={Platform.OS === 'ios' ? 'inline' : 'default'}
+            display={Platform.OS === "ios" ? "inline" : "default"}
             onChange={(_, d) => {
               setShowDatePicker(false);
               if (d) setDate(d);
@@ -198,10 +313,21 @@ const FlightStatus: React.FC = () => {
           >
             <Picker.Item label="-- Выберите статус --" value="" />
             {statusDir.map((s) => (
-              <Picker.Item key={s.status_id} label={s.name} value={s.status_id} />
+              <Picker.Item
+                key={s.status_id}
+                label={s.name}
+                value={s.status_id}
+              />
             ))}
           </Picker>
         </View>
+
+        <TouchableOpacity
+          style={[styles.submitButton, { backgroundColor: "#f57c00" }]}
+          onPress={handleApplyStatus}
+        >
+          <Text style={styles.submitText}>Применить статус</Text>
+        </TouchableOpacity>
 
         {/* Заказчик */}
         <Text style={styles.label}>Выберите заказчика</Text>
@@ -213,7 +339,11 @@ const FlightStatus: React.FC = () => {
           >
             <Picker.Item label="-- Выберите заказчика --" value="" />
             {clients.map((c) => (
-              <Picker.Item key={c.client_id} label={c.client} value={c.client_id} />
+              <Picker.Item
+                key={c.client_id}
+                label={c.client}
+                value={c.client_id}
+              />
             ))}
           </Picker>
         </View>
@@ -262,46 +392,62 @@ const FlightStatus: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: '#fff' },
-  label: { marginTop: 12, marginBottom: 4, fontWeight: '600' },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  inputButton: { flex: 1, padding: 12, borderWidth: 1, borderColor: '#ccc', borderRadius: 8 },
-  nowButton: { marginLeft: 8, padding: 12, backgroundColor: '#4CAF50', borderRadius: 8 },
-  nowText: { color: '#fff', fontWeight: '700' },
+  container: { flex: 1, padding: 16, backgroundColor: "#fff" },
+  label: { marginTop: 12, marginBottom: 4, fontWeight: "600" },
+  row: { flexDirection: "row", alignItems: "center", gap: 8 },
+  inputButton: {
+    flex: 1,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+  },
+  nowButton: {
+    marginLeft: 8,
+    padding: 12,
+    backgroundColor: "#4CAF50",
+    borderRadius: 8,
+  },
+  nowText: { color: "#fff", fontWeight: "700" },
   pickerWrapper: {
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: "#ccc",
     borderRadius: 8,
-    overflow: 'hidden',
+    overflow: "hidden",
     marginBottom: 12,
   },
   picker: {
     height: 44,
-    width: '100%',
+    width: "100%",
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: "#ccc",
     borderRadius: 8,
     padding: 12,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: "#f9f9f9",
   },
   submitButton: {
     marginTop: 16,
-    backgroundColor: '#2196F3',
+    backgroundColor: "#2196F3",
     padding: 14,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
-  submitText: { color: '#fff', fontWeight: '700' },
-  historyTitle: { fontSize: 18, fontWeight: '600', marginTop: 24, marginBottom: 12 },
+  submitText: { color: "#fff", fontWeight: "700" },
+  historyTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginTop: 24,
+    marginBottom: 12,
+  },
   statusItem: {
     padding: 12,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderRadius: 8,
     marginBottom: 8,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
   },
 });
 
