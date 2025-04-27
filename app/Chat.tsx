@@ -1,23 +1,122 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as DocumentPicker from 'expo-document-picker';
-import AppHeader from './AppHeader'; 
+import AppHeader from './AppHeader';
+import { Driver } from './types';
 
 type Message = {
   id: string;
   text?: string;
   fileName?: string;
+  author: 'V' | 'D';
+  stamp: string;
 };
 
-const ChatScreen: React.FC = () => {
+const Chat: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(true);
+  const flatListRef = useRef<FlatList>(null);
+  const [driver, setDriver] = useState<Driver | null>(null);
 
-  const sendMessage = () => {
-    if (input.trim() !== '') {
-      const newMessage: Message = { id: Date.now().toString(), text: input };
-      setMessages([...messages, newMessage]);
-      setInput('');
+  useEffect(() => {
+    const fetchDriver = async () => {
+      try {
+        const baseUrl = await AsyncStorage.getItem('base_url');
+        const token = await AsyncStorage.getItem('access_token');
+        if (!baseUrl || !token) {
+          return;
+        }
+        const resp = await fetch(`${baseUrl}/get_info`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: '{}',
+        });
+        const data = await resp.json();
+        if (data?.driver) {
+          setDriver(data.driver);
+        }
+      } catch (e) {
+        console.error('Ошибка загрузки данных водителя:', e);
+      }
+    };
+
+    fetchDriver();
+  }, []);
+
+  useEffect(() => {
+    if (flatListRef.current) {
+      flatListRef.current.scrollToEnd({ animated: true });
+    }
+  }, [messages]);
+
+  const fetchChat = async () => {
+    try {
+      const baseUrl = await AsyncStorage.getItem('base_url');
+      const token = await AsyncStorage.getItem('access_token');
+      if (!baseUrl || !token) {
+        Alert.alert('Ошибка', 'Нет данных для подключения');
+        return;
+      }
+      const resp = await fetch(`${baseUrl}/get_chat`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const data = await resp.json();
+      if (data?.chat) {
+        const fetchedMessages = data.chat.map((item: any) => ({
+          id: item.driver_chat_key.toString(),
+          text: item.chat_msg,
+          author: item.autor,
+          stamp: item.stamp,
+        }));
+        setMessages(fetchedMessages);
+      }
+    } catch (error: any) {
+      Alert.alert('Ошибка', error.message || 'Не удалось загрузить чат');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchChat();
+  }, []);
+
+  const sendMessage = async () => {
+    if (input.trim() === '') return;
+
+    try {
+      const baseUrl = await AsyncStorage.getItem('base_url');
+      const token = await AsyncStorage.getItem('access_token');
+      if (!baseUrl || !token) {
+        Alert.alert('Ошибка', 'Нет данных для подключения');
+        return;
+      }
+
+      const resp = await fetch(`${baseUrl}/set_chat`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ msg: input }),
+      });
+
+      const data = await resp.json();
+      if (data?.chat) {
+        const updatedMessages = data.chat.map((item: any) => ({
+          id: item.driver_chat_key.toString(),
+          text: item.chat_msg,
+          author: item.autor,
+          stamp: item.stamp,
+        }));
+        setMessages(updatedMessages);
+        setInput('');
+      } else {
+        Alert.alert('Ошибка', 'Некорректный формат ответа сервера');
+      }
+    } catch (error: any) {
+      Alert.alert('Ошибка', error.message || 'Не удалось отправить сообщение');
     }
   };
 
@@ -26,28 +125,43 @@ const ChatScreen: React.FC = () => {
       const result = await DocumentPicker.getDocumentAsync({});
       if (result.assets && result.assets.length > 0) {
         const file = result.assets[0];
-        const fileMessage: Message = {
+        const newFileMessage: Message = {
           id: Date.now().toString(),
           fileName: file.name,
+          author: 'V',
+          stamp: new Date().toLocaleString(),
         };
-        setMessages([...messages, fileMessage]);
+        setMessages((prev) => [...prev, newFileMessage]);
       }
     } catch (error) {
-      console.error('Ошибка при выборе файла:', error);
+      console.error('Ошибка выбора файла:', error);
     }
   };
 
   const renderItem = ({ item }: { item: Message }) => (
-    <View style={styles.messageBubble}>
+    <View style={[
+      styles.messageBubble,
+      item.author === 'V' ? styles.driverBubble : styles.dispatcherBubble,
+    ]}>
       {item.text && <Text style={styles.messageText}>{item.text}</Text>}
       {item.fileName && <Text style={styles.fileText}>📎 {item.fileName}</Text>}
+      <Text style={styles.timeStamp}>{item.stamp}</Text>
     </View>
   );
 
   return (
     <View style={styles.container}>
-        <AppHeader screenName="Чат" status="Активен" driverName="Иванов И.И." />
+      {driver && (
+        <AppHeader
+          screenName="Информация о рейсе"
+          status=""
+          driverName={driver.fio}
+          driver={driver}
+        />
+      )}
+
       <FlatList
+        ref={flatListRef}
         data={messages}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
@@ -73,18 +187,25 @@ const ChatScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 10, backgroundColor: '#fff' },
-  chatContainer: { paddingBottom: 80 },
+  container: { flex: 1, backgroundColor: '#fff' },
+  chatContainer: { paddingBottom: 80, paddingHorizontal: 10 },
   messageBubble: {
-    backgroundColor: '#e0f7fa',
     padding: 10,
     borderRadius: 10,
     marginBottom: 10,
-    alignSelf: 'flex-start',
     maxWidth: '80%',
+  },
+  driverBubble: {
+    backgroundColor: '#e0f7fa',
+    alignSelf: 'flex-start',
+  },
+  dispatcherBubble: {
+    backgroundColor: '#ffe0b2',
+    alignSelf: 'flex-end',
   },
   messageText: { fontSize: 16 },
   fileText: { fontSize: 16, fontStyle: 'italic', color: '#00796b' },
+  timeStamp: { fontSize: 10, color: '#999', marginTop: 5 },
   inputContainer: {
     flexDirection: 'row',
     position: 'absolute',
@@ -118,4 +239,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ChatScreen;
+export default Chat;

@@ -9,7 +9,7 @@ interface AppHeaderProps {
   screenName: string;
   status: string;
   driverName: string;
-  driver: Driver;       // объект водителя
+  driver: Driver;      
 }
 
 const ROUTES = {
@@ -65,7 +65,7 @@ export default function AppHeader({ screenName, status, driverName, driver }: Ap
             setMenuOpen(false);
             router.push({
               pathname: ROUTES.driverInfo,
-              params: { driver: JSON.stringify(driver) },  // передаём объект
+              params: { driver: JSON.stringify(driver) },  
             });
           }}>
             <Text style={styles.menuItem}>Информация о водителе</Text>

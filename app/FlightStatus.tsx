@@ -15,8 +15,15 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import AppHeader from "./AppHeader";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Picker } from "@react-native-picker/picker";
+import { Driver } from './types';
+
+
 
 type TrackClient = { client_id: string; client: string };
+
+
+
+
 
 const FlightStatus: React.FC = () => {
   const [date, setDate] = useState(new Date());
@@ -35,6 +42,8 @@ const FlightStatus: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [raznZakId, setRaznZakId] = useState<string>("");
   const [driverName, setDriverName] = useState<string>("");
+  const [driver, setDriver] = useState<Driver | null>(null);
+
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -63,9 +72,10 @@ const FlightStatus: React.FC = () => {
           }))
         );
 
-        if (infoJson.driver?.fio) {
-          setDriverName(infoJson.driver.fio);
+        if (infoJson.driver) {
+          setDriver(infoJson.driver);
         }
+        
 
         const firstRaznId = infoJson.route?.[0]?.razn_id;
         setRaznId(firstRaznId ? String(firstRaznId) : "");
@@ -273,9 +283,23 @@ const FlightStatus: React.FC = () => {
     }
   };
 
+  const handleApplyAndSubmit = async () => {
+    await handleApplyStatus();
+    await handleSubmit();
+  };
+  
+
   return (
     <SafeAreaView style={styles.container}>
-    <AppHeader screenName="Статус рейса" status="Активен" driverName={driverName} />
+    {driver && (
+  <AppHeader
+    screenName="Информация о рейсе"
+    status=""
+    driverName={driver.fio}
+    driver={driver}
+  />
+)}
+
 
       <ScrollView>
         {/* Дата и время */}
@@ -325,12 +349,7 @@ const FlightStatus: React.FC = () => {
           </Picker>
         </View>
 
-        <TouchableOpacity
-          style={[styles.submitButton, { backgroundColor: "#f57c00" }]}
-          onPress={handleApplyStatus}
-        >
-          <Text style={styles.submitText}>Применить статус</Text>
-        </TouchableOpacity>
+      
 
         {/* Заказчик */}
         <Text style={styles.label}>Выберите заказчика</Text>
@@ -371,9 +390,10 @@ const FlightStatus: React.FC = () => {
           multiline
         />
 
-        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-          <Text style={styles.submitText}>Отправить</Text>
-        </TouchableOpacity>
+<TouchableOpacity style={styles.submitButton} onPress={handleApplyAndSubmit}>
+  <Text style={styles.submitText}>Отправить</Text>
+</TouchableOpacity>
+
 
         {/* История */}
         <Text style={styles.historyTitle}>История статусов</Text>

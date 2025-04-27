@@ -96,3 +96,4 @@ const styles = StyleSheet.create({
   label: { fontWeight: '600', fontSize: 16, color: '#444' },
   value: { fontSize: 16, marginTop: 2, color: '#555' },
 });
+

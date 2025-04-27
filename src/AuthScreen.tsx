@@ -12,17 +12,21 @@ import { useDispatch } from 'react-redux';
 import { setTokens } from '../store/authSlice'; 
 import type { AppDispatch } from '../store/store'; 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 
-type Props = {
-  onLoginSuccess: () => void;
-};
 
-const AuthScreen: React.FC<Props> = ({ onLoginSuccess }) => {
+
+interface Props {}
+
+
+const AuthScreen: React.FC<Props> = () => {
   const dispatch = useDispatch<AppDispatch>();
-
+  const router = useRouter();
   const [user, setUser] = useState('');
   const [password, setPassword] = useState('');
   const [inn, setInn] = useState('');
+
+
 
   const handleLogin = async () => {
     try {
@@ -71,7 +75,7 @@ if (authData.token) {
   );
 
         console.log('Успешный вход');
-        onLoginSuccess();
+        router.push('/FlightInfoScreen');
       } else {
         throw new Error('Не получен токен');
       }

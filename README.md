@@ -1,50 +1,72 @@
-# Welcome to your Expo app 👋
+# DriverApp
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**DriverApp** — мобильное приложение для водителей, часть программного комплекса для автоматизации работы автотранспорта. Приложение предоставляет водителям доступ к задачам, рейсам, документации и статусам в режиме реального времени.
 
-## Get started
+## Описание проекта
 
-1. Install dependencies
+DriverApp заменяет устаревший веб‑модуль, который использовался через браузер. Приложение позволяет водителям:
 
-   ```bash
-   npm install
-   ```
+- Получать задание с рейсом и статусами.
+- Изменять статус работы (выехал, на погрузке, завершено и т.д.).
+- Сохранять и просматривать документы (путевые листы, тахографы, права и т.д.).
 
-2. Start the app
+## Быстрый старт
 
-   ```bash
-    npx expo start
-   ```
+### 1. Клонировать репозиторий
 
-In the output, you'll find options to open the app in a
+\`\`\`bash
+git clone https://github.com/YourOrg/DriverApp.git
+cd DriverApp
+\`\`\`
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### 2. Установить зависимости
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+\`\`\`bash
+yarn install
+# или
+npm install
+\`\`\`
 
-## Get a fresh project
+### 3. Запуск проекта
 
-When you're ready, run:
+\`\`\`bash
+expo start
+\`\`\`
 
-```bash
-npm run reset-project
-```
+Или откройте проект в Android/iOS‑эмуляторе.
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Структура приложения
 
-## Learn more
+- **AuthScreen** — экран авторизации с JWT токеном.  
+- **FlightInfoScreen** — информация о рейсе (детали маршрута и назначения).  
+- **FlightStatus** — выбор и изменение статуса рейса (выехал, на погрузке, завершено и т.д.).  
+- **AppHeader** — глобальный хедер с меню навигации и пользовательским профилем.  
 
-To learn more about developing your project with Expo, look at the following resources:
+## Технологии
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- **React Native** — для разработки мобильного приложения.  
+- **PostgreSQL** — для хранения данных и логики.  
+- **JWT** — для аутентификации и безопасности.  
+- **REST API** — для взаимодействия между мобильным приложением и сервером.  
 
-## Join the community
+## Требования
 
-Join our community of developers creating universal apps.
+- Node.js ≥ 14.x  
+- npm ≥ 6.x  
+- Expo CLI (или React Native CLI для сборки приложения)  
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Как вносить изменения
+
+1. Создайте новую ветку: \`feature/имя‑фичи\`.  
+2. Пишите код и добавляйте необходимые тесты.  
+3. Оформите Pull Request в основную ветку (\`main\`).  
+4. После ревью и тестирования изменения будут замержены.  
+
+## Тестирование
+
+- Для unit‑тестов используйте [Jest](https://jestjs.io/).  
+- Для энд‑ту‑энд‑тестирования можно использовать [Cypress](https://www.cypress.io/).  
+
+## Лицензия
+
+Этот проект лицензирован под MIT. См. файл [LICENSE](LICENSE) для подробностей.
