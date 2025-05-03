@@ -35,7 +35,7 @@ export default function AppHeader({ screenName, status, driverName, driver }: Ap
       </View>
       <View style={styles.bottomRow}>
         <Text style={styles.status}>{status}</Text>
-        <Text style={styles.driver}>Водитель: {driverName}</Text>
+        <Text style={styles.driver}> {driverName}</Text>
       </View>
 
       {menuOpen && (

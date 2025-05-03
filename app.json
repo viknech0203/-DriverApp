@@ -15,7 +15,9 @@
       "adaptiveIcon": {
         "foregroundImage": "./src/assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.evlem.myApp",
+      "usesCleartextTraffic": true
     },
     "web": {
       "bundler": "metro",
@@ -37,11 +39,19 @@
     "experiments": {
       "typedRoutes": true
     },
-    "host": "lan",  
+    "host": "lan",
     "packagerOpts": {
       "dev": true,
       "minify": false,
       "useReactNative": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "1e3275ea-8618-42e1-b1ef-951117a59d5f"
+      }
     }
   }
 }

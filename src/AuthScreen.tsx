@@ -51,9 +51,7 @@ const AuthScreen: React.FC<Props> = () => {
       if (!authResponse.ok) throw new Error('Ошибка авторизации');
 
       const authData = await authResponse.json();
-//       const raw = await authResponse.text();
-// console.log('RAW ответ:', raw);
-// const authData = raw ? JSON.parse(raw) : {};
+
 
 if (authData.token) {
   await AsyncStorage.setItem('access_token', authData.token);
@@ -70,7 +68,7 @@ if (authData.token) {
   dispatch(
     setTokens({
       accessToken: authData.token,
-      refreshToken: authData.refresh_token ?? null, // или "" — если у тебя nullable тип
+      refreshToken: authData.refresh_token ?? null, 
     })
   );
 
