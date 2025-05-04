@@ -13,8 +13,7 @@ export default function MainTabs() {
     <Tab.Navigator
       screenOptions={{
         swipeEnabled: true,
-        tabBarLabelStyle: { fontSize: 12 },
-        tabBarStyle: { backgroundColor: '#B7C8E1' },
+        tabBarStyle: { display: 'none' },
       }}
     >
       <Tab.Screen name="Рейс" component={FlightInfoScreen} />

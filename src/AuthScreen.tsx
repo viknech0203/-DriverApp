@@ -13,6 +13,7 @@ import { setTokens } from '../store/authSlice';
 import type { AppDispatch } from '../store/store'; 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
+import MainTabs from 'app/MainTabs';
 
 
 
@@ -73,7 +74,7 @@ if (authData.token) {
   );
 
         console.log('Успешный вход');
-        router.push('/FlightInfoScreen');
+        router.push('/MainTabs');
       } else {
         throw new Error('Не получен токен');
       }

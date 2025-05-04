@@ -1,11 +1,11 @@
 module.exports = {
   presets: ['babel-preset-expo'],
   plugins: [
-    'react-native-reanimated/plugin', // Добавлено для работы с Reanimated
+    'react-native-reanimated/plugin',
     ['module-resolver', {
       root: ['./'],
       alias: {
-        '@': './src', // Алиас для src
+        '@': './src',
       },
     }],
   ],
