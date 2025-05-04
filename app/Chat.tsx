@@ -13,6 +13,7 @@ import * as DocumentPicker from "expo-document-picker";
 import AppHeader from "./AppHeader";
 import { Driver } from "./types";
 import { Image } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 
 type Message = {
   id: string;
@@ -87,12 +88,14 @@ const Chat: React.FC = () => {
       const data = await resp.json();
       if (data?.chat) {
         const fetchedMessages = data.chat.map((item: any) => ({
-          id: item.driver_chat_key ? item.driver_chat_key.toString() : Date.now().toString() + Math.random(),
+          id: item.driver_chat_key
+            ? item.driver_chat_key.toString()
+            : Date.now().toString() + Math.random(),
           text: item.chat_msg,
           author: item.autor,
           stamp: item.stamp,
         }));
-        
+
         setMessages(fetchedMessages);
       }
     } catch (error: any) {
@@ -130,12 +133,14 @@ const Chat: React.FC = () => {
         const data = await resp.json();
         if (data?.chat) {
           const updatedMessages = data.chat.map((item: any) => ({
-            id: item.driver_chat_key ? item.driver_chat_key.toString() : Date.now().toString() + Math.random(),
+            id: item.driver_chat_key
+              ? item.driver_chat_key.toString()
+              : Date.now().toString() + Math.random(),
             text: item.chat_msg,
             author: item.autor,
             stamp: item.stamp,
           }));
-          
+
           setMessages(updatedMessages);
           setInput("");
         }
@@ -147,59 +152,58 @@ const Chat: React.FC = () => {
       }
     }
 
- 
-  // Отправка файлов
-for (const asset of files) {
-  try {
-    const fileName = asset.name || asset.uri?.split("/").pop() || "upload.dat";
-    const mimeType = asset.mimeType || "application/octet-stream";
+    // Отправка файлов
+    for (const asset of files) {
+      try {
+        const fileName =
+          asset.name || asset.uri?.split("/").pop() || "upload.dat";
+        const mimeType = asset.mimeType || "application/octet-stream";
 
-    console.log(" Готовим файл к отправке:", {
-      name: fileName,
-      uri: asset.uri,
-      type: mimeType,
-    });
+        console.log(" Готовим файл к отправке:", {
+          name: fileName,
+          uri: asset.uri,
+          type: mimeType,
+        });
 
-    const formData = new FormData();
-    formData.append("file", {
-      uri: asset.uri,
-      type: mimeType,
-      name: fileName,
-    } as any);
+        const formData = new FormData();
+        formData.append("file", {
+          uri: asset.uri,
+          type: mimeType,
+          name: fileName,
+        } as any);
 
-    const response = await fetch(`${baseUrl}/send_file`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: formData,
-    });
+        const response = await fetch(`${baseUrl}/send_file`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        });
 
-    const responseData = await response.json().catch(() => ({}));
-    console.log(" Ответ от сервера:", response.status, responseData);
+        const responseData = await response.json().catch(() => ({}));
+        console.log(" Ответ от сервера:", response.status, responseData);
 
-    if (response.ok) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now().toString(),
-          fileName,
-          fileUri: asset.uri,
-          author: "V",
-          stamp: new Date().toLocaleString(),
-        },
-      ]);
-    } else {
-      Alert.alert("Ошибка", `Файл ${fileName} не отправлен`);
+        if (response.ok) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: Date.now().toString(),
+              fileName,
+              fileUri: asset.uri,
+              author: "V",
+              stamp: new Date().toLocaleString(),
+            },
+          ]);
+        } else {
+          Alert.alert("Ошибка", `Файл ${fileName} не отправлен`);
+        }
+      } catch (error) {
+        console.error(" Ошибка при отправке файла:", error);
+        Alert.alert("Ошибка", "Не удалось отправить файл");
+      }
     }
-  } catch (error) {
-    console.error(" Ошибка при отправке файла:", error);
-    Alert.alert("Ошибка", "Не удалось отправить файл");
-  }
-}
 
-
-    setFiles([]); 
+    setFiles([]);
   };
 
   const pickFile = async () => {
@@ -209,9 +213,9 @@ for (const asset of files) {
         multiple: true,
         copyToCacheDirectory: true,
       });
-  
+
       if (!result.assets || result.assets.length === 0) return;
-  
+
       const updatedAssets = result.assets.map((asset) => {
         const nameFromUri = asset.uri?.split("/").pop();
         const finalName = asset.name || nameFromUri || "unnamed_file.dat";
@@ -225,17 +229,47 @@ for (const asset of files) {
           name: finalName,
         };
       });
-  
+
       setFiles(updatedAssets);
     } catch (error) {
       console.error(" Ошибка при выборе файла:", error);
       Alert.alert("Ошибка", "Не удалось выбрать файл");
     }
   };
-  
-  
 
+  const takePhoto = async () => {
+    try {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert("Ошибка", "Требуется доступ к камере");
+        return;
+      }
 
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.7,
+        allowsEditing: false,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const photo = result.assets[0];
+        const fileName =
+          photo.fileName || photo.uri.split("/").pop() || "photo.jpg";
+
+        setFiles((prev) => [
+          ...prev,
+          {
+            uri: photo.uri,
+            name: fileName,
+            mimeType: "image/jpeg",
+          },
+        ]);
+      }
+    } catch (error) {
+      console.error("Ошибка при съемке фото:", error);
+      Alert.alert("Ошибка", "Не удалось открыть камеру");
+    }
+  };
 
   const renderItem = ({ item }: { item: Message }) => {
     const isImage = item.fileName?.match(/\.(jpg|jpeg|png|gif)$/i);
@@ -320,6 +354,12 @@ for (const asset of files) {
           onPress={pickFile}
         >
           <Text style={styles.buttonText}>📎</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: "#FF5722" }]}
+          onPress={takePhoto}
+        >
+          <Text style={styles.buttonText}>📷</Text>
         </TouchableOpacity>
       </View>
     </View>
