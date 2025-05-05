@@ -315,6 +315,9 @@ const Chat: React.FC = () => {
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.chatContainer}
+        onContentSizeChange={() => {
+        flatListRef.current?.scrollToEnd({ animated: false });
+        }}
       />
 
       {files.length > 0 && (
