@@ -41,20 +41,25 @@ export default function FlightInfoScreen() {
     return <ActivityIndicator style={{ flex: 1 }} size="large" color="#779DD6" />;
   }
 
-  if (!flightData) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.header}>Информация не найдена</Text>
-      </View>
-    );
-  }
+if (!flightData || !flightData.driver || !flightData.route) {
+  return (
+    <View style={styles.container}>
+      <Text style={styles.header}>Данные рейса повреждены или не найдены</Text>
+    </View>
+  );
+}
 
   const { driver, route } = flightData;
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
       {/* Передаём driver целиком */}
-      <AppHeader screenName="Информация о рейсе" status="Активен" driverName={driver.fio} driver={driver} />
+<AppHeader
+  screenName="Информация о рейсе"
+  status="Активен"
+  driverName={driver?.fio || 'Неизвестный водитель'}
+  driver={driver}
+/>
 
       <Text style={styles.sectionTitle}>Маршруты</Text>
       {route.map((r, i) => (
