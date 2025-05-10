@@ -16,16 +16,12 @@
         "foregroundImage": "./src/assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.evlem.myApp",
-      "usesCleartextTraffic": true
+      "package": "com.evlem.myApp"
     },
     "web": {
-      "bundler": "metro",
-      "output": "static",
       "favicon": "./src/assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router",
       [
         "expo-splash-screen",
         {
@@ -34,21 +30,15 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "expo-font"
     ],
-    "experiments": {
-      "typedRoutes": true
-    },
-    "host": "lan",
     "packagerOpts": {
       "dev": true,
       "minify": false,
       "useReactNative": true
     },
     "extra": {
-      "router": {
-        "origin": false
-      },
       "eas": {
         "projectId": "1e3275ea-8618-42e1-b1ef-951117a59d5f"
       }

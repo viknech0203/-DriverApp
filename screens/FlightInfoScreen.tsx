@@ -4,11 +4,9 @@ import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert } from 're
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AppHeader from './AppHeader';
 import DriverInfo, { Driver } from './DriverInfo';
+import { FlightData } from './types';
 
-type FlightData = {
-  driver: Driver;
-  route: any[];
-};
+
 
 export default function FlightInfoScreen() {
   const [flightData, setFlightData] = useState<FlightData | null>(null);
@@ -29,7 +27,8 @@ export default function FlightInfoScreen() {
           body: JSON.stringify({}),
         });
         const data = await resp.json();
-        setFlightData(data);
+        setFlightData(data as FlightData);
+        
       } catch (e: any) {
         Alert.alert('Ошибка', e.message || 'Не удалось загрузить данные');
       } finally {

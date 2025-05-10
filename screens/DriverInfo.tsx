@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
 import AppHeader from './AppHeader'; // путь правильный
+import { useRoute } from '@react-navigation/native';
 
 export type Document = {
   name: string;
@@ -16,8 +16,8 @@ export type Driver = {
 };
 
 export default function DriverInfo() {
-  const params = useLocalSearchParams();
-  const raw = params.driver as string | undefined;
+  const route = useRoute();
+  const raw = route.params?.driver as string | undefined; 
 
   useEffect(() => {
     console.log('=== DriverInfo монтируется ===', raw);

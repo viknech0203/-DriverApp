@@ -15,11 +15,16 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import AppHeader from "./AppHeader";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Picker } from "@react-native-picker/picker";
-import { Driver } from './types';
+// import { Driver } from './types';
+import {
+  Driver,
+  TrackClient,
+  InfoResponse,
+  DirResponse,
+  HistoryResponse,
+  SetStatusResponse,
+} from './types';
 
-
-
-type TrackClient = { client_id: string; client: string };
 
 
 
@@ -63,7 +68,8 @@ const FlightStatus: React.FC = () => {
           headers,
           body: "{}",
         });
-        const infoJson = await infoResp.json();
+        const infoJson = (await infoResp.json()) as InfoResponse;
+
 
         setClients(
           (infoJson.clients || []).map((c: any) => ({
@@ -85,7 +91,8 @@ const FlightStatus: React.FC = () => {
           headers,
           body: "{}",
         });
-        const dirJson = await dirResp.json();
+        const dirJson = (await dirResp.json()) as DirResponse;
+
 
         const trackClients: TrackClient[] = (infoJson.route || [])
           .flatMap((route: any) => route.track || [])
@@ -123,10 +130,10 @@ const FlightStatus: React.FC = () => {
             headers,
             body: JSON.stringify({ razn_zak_id: raznZakIdValue }),
           });
-          const historyJson = await historyResp.json();
+          const historyJson = await historyResp.json() as HistoryResponse;
           const history = historyJson.status_list || [];
-
           setStatuses(history);
+          
 
           //  Устанавливаем последний применённый статус в selectedStatusId
           if (history.length > 0) {
@@ -179,7 +186,7 @@ const FlightStatus: React.FC = () => {
         headers,
         body: JSON.stringify(body),
       });
-      const result = await resp.json();
+      const result = await resp.json() as SetStatusResponse;
       if (result.status?.code === 0) {
         // Обновляем историю
         const historyResp = await fetch(`${baseUrl}/get_status/${raznId}`, {
@@ -187,10 +194,11 @@ const FlightStatus: React.FC = () => {
           headers,
           body: "{}",
         });
-        const historyJson = await historyResp.json();
-        setStatuses(historyJson.status_list || []);
+        const historyJson = await historyResp.json() as HistoryResponse;
+        const history = historyJson.status_list || [];
+        setStatuses(history);
       } else {
-        console.error("Ошибка при отправке:", result.status.text);
+        console.error("Ошибка при отправке:", result.status?.text || "Неизвестная ошибка");
       }
     } catch (e) {
       console.error("Ошибка handleSubmit:", e);
@@ -234,7 +242,7 @@ const FlightStatus: React.FC = () => {
         body: JSON.stringify(body),
       });
 
-      const result = await resp.json();
+      const result = await resp.json() as SetStatusResponse;
 
       console.log(" Ответ от /set_status:");
       console.log(JSON.stringify(result, null, 2));
@@ -251,10 +259,10 @@ const FlightStatus: React.FC = () => {
           body: JSON.stringify({ razn_zak_id: raznZakId }),
         });
 
-        const historyJson = await historyResp.json();
-        console.log(" История статусов:");
-        console.log(JSON.stringify(historyJson, null, 2));
-        setStatuses(historyJson.status_list || []);
+
+        const historyJson = await historyResp.json() as HistoryResponse;
+        const history = historyJson.status_list || [];
+        setStatuses(history);
 
         // Обновляем справочник статусов
         const dirResp = await fetch(`${baseUrl}/get_status_dir`, {
@@ -262,7 +270,7 @@ const FlightStatus: React.FC = () => {
           headers,
           body: "{}",
         });
-        const dirJson = await dirResp.json();
+        const dirJson = await dirResp.json() as DirResponse;
         console.log(" Обновлённый справочник статусов:");
         console.log(JSON.stringify(dirJson, null, 2));
 

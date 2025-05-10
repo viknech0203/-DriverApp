@@ -1,72 +1,62 @@
-// AppHeader.tsx
-import React from 'react';
+
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
 import { Driver } from './DriverInfo';
 
 interface AppHeaderProps {
   screenName: string;
   status: string;
   driverName: string;
-  driver: Driver;      
+  driver: Driver;
 }
 
-const ROUTES = {
-  flightInfo: '/FlightInfoScreen',
-  chat: '/Chat',
-  status: '/FlightStatus',
-  driverInfo: '/DriverInfo',
-} as const;
-type RouteKey = keyof typeof ROUTES;
-
 export default function AppHeader({ screenName, status, driverName, driver }: AppHeaderProps) {
-  const router = useRouter();
-  const [menuOpen, setMenuOpen] = React.useState(false);
+  const navigation = useNavigation<any>();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <View style={styles.wrapper}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => setMenuOpen(o => !o)}>
+        <TouchableOpacity onPress={() => setMenuOpen((prev) => !prev)}>
           <Ionicons name="menu" size={24} color="black" />
         </TouchableOpacity>
         <Text style={styles.screenName}>{screenName}</Text>
         <Text style={styles.dateTime}>{new Date().toLocaleString()}</Text>
       </View>
+
       <View style={styles.bottomRow}>
         <Text style={styles.status}>{status}</Text>
-        <Text style={styles.driver}> {driverName}</Text>
+        <Text style={styles.driver}>{driverName}</Text>
       </View>
 
       {menuOpen && (
         <View style={styles.menu}>
           <TouchableOpacity onPress={() => {
             setMenuOpen(false);
-            router.push(ROUTES.flightInfo);
+            navigation.navigate('Информация о рейсе');
           }}>
             <Text style={styles.menuItem}>Информация о рейсе</Text>
           </TouchableOpacity>
 
           <TouchableOpacity onPress={() => {
             setMenuOpen(false);
-            router.push(ROUTES.chat);
+            navigation.navigate('Chat');
           }}>
             <Text style={styles.menuItem}>Чат</Text>
           </TouchableOpacity>
 
           <TouchableOpacity onPress={() => {
             setMenuOpen(false);
-            router.push(ROUTES.status);
+            navigation.navigate('Статус рейса');
           }}>
             <Text style={styles.menuItem}>Статус рейса</Text>
           </TouchableOpacity>
 
           <TouchableOpacity onPress={() => {
             setMenuOpen(false);
-            router.push({
-              pathname: ROUTES.driverInfo,
-              params: { driver: JSON.stringify(driver) },  
-            });
+            navigation.navigate('Информация о водителе', { driver });
           }}>
             <Text style={styles.menuItem}>Информация о водителе</Text>
           </TouchableOpacity>

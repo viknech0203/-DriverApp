@@ -1,27 +1,33 @@
-import { Link } from 'expo-router';
-import { openBrowserAsync } from 'expo-web-browser';
-import { type ComponentProps } from 'react';
-import { Platform } from 'react-native';
+import React from 'react';
+import { TouchableOpacity, Text, Platform } from 'react-native';
+import { openBrowserAsync } from 'expo-web-browser'; // для открытия браузера
+import { Linking } from 'react-native'; // для работы с ссылками
 
-type Props = Omit<ComponentProps<typeof Link>, 'href'> & { href: string };
+type Props = {
+  href: string;
+  children: React.ReactNode;
+};
 
-export function ExternalLink({ href, ...rest }: Props) {
-  // Убедитесь, что href правильно типизирован, если это динамический путь
-  const resolvedHref = `./hooks/useColorScheme`;  // пример относительного пути
+export function ExternalLink({ href, children }: Props) {
+  const resolvedHref = href;  // Динамически передаваемый путь или внешний URL
+
+  const handlePress = async (event: any) => {
+    if (Platform.OS !== 'web') {
+      // Prevent default browser behavior in native apps
+      event.preventDefault();
+      // Open the link in an in-app browser
+      await openBrowserAsync(resolvedHref);
+    } else {
+      // Если на вебе, используем стандартное поведение
+      Linking.openURL(resolvedHref);
+    }
+  };
 
   return (
-    <Link
-      target="_blank"
-      {...rest}
-      href={resolvedHref}  // Использование правильно типизированного пути
-      onPress={async (event) => {
-        if (Platform.OS !== 'web') {
-          // Prevent the default behavior of linking to the default browser on native.
-          event.preventDefault();
-          // Open the link in an in-app browser.
-          await openBrowserAsync(resolvedHref);
-        }
-      }}
-    />
+    <TouchableOpacity onPress={handlePress}>
+      <Text style={{ color: 'blue', textDecorationLine: 'underline' }}>
+        {children}
+      </Text>
+    </TouchableOpacity>
   );
 }

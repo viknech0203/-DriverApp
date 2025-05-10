@@ -1,6 +1,7 @@
 
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { ServerInfoResponse,LoginResponse  } from '../screens/types';
 
 interface AuthState {
   login: string;
@@ -22,52 +23,77 @@ const initialState: AuthState = {
 
 export const fetchServerInfo = createAsyncThunk(
   'auth/fetchServerInfo',
-  async (inn: string) => {
-    const response = await fetch('https://app.atp-online.ru/driver_app/get_info.php', {
+  async (inn: string): Promise<string> => {
+    const response = await fetch('https://app.atp-online.ru/driver_app/get_host.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ inn }),
     });
-    const data = await response.json();
-    if (!data.host || !data.port) {
-      throw new Error('Не удалось получить сервер');
+
+    const json = await response.json();
+    if (
+      typeof json !== 'object' ||
+      json === null ||
+      !('port' in json) ||
+      typeof (json as any).port !== 'number'
+    )  {
+      throw new Error('Неверный формат ответа сервера');
     }
-    return `http://${data.host}:${data.port}/api/v1/driver_mode`;
+
+    const data = json as ServerInfoResponse;
+
+    if (data.port === 0) {
+      throw new Error('Подключение невозможно. Обратитесь к системному администратору организации');
+    }
+
+    const protocol = data.is_ssl_port === 1 ? 'https' : 'http';
+    return `${protocol}://${data.host}:${data.port}/api/v1/driver_mode`;
   }
 );
+
 
 export const loginUser = createAsyncThunk(
   'auth/loginUser',
   async (
     { login, password, baseUrl }: { login: string; password: string; baseUrl: string },
     thunkAPI
-  ) => {
+  ): Promise<{ accessToken: string; refreshToken: string | null }> => {
     const response = await fetch(`${baseUrl}/auth`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ login, password }),
+      body: JSON.stringify({ user: login, password }), // ← обязательно "user", не "login"
     });
 
     if (!response.ok) {
       throw new Error('Ошибка авторизации');
     }
 
-    const data = await response.json();
+    const json = await response.json();
 
-    if (data.token) {
-      await AsyncStorage.setItem('access_token', data.token);
-      if (data.refresh_token) {
-        await AsyncStorage.setItem('refresh_token', data.refresh_token);
-      }
-      return {
-        accessToken: data.token,
-        refreshToken: data.refresh_token,
-      };
-    } else {
-      throw new Error('Токен не получен');
+    // Проверка структуры данных
+    if (typeof json !== 'object' || json === null || !('token' in json)) {
+      throw new Error('Токен не получен или структура ответа некорректна');
     }
+
+    // Приведение к типу LoginResponse
+    const data: LoginResponse = {
+      token: json.token,
+      refresh: json.refresh ?? null as string | null,
+    };
+
+    await AsyncStorage.setItem('access_token', data.token);
+    if (data.refresh) {
+      await AsyncStorage.setItem('refresh_token', data.refresh);
+    }
+
+    return {
+      accessToken: data.token,
+      refreshToken: data.refresh,
+    };
   }
 );
+
+
 
 const authSlice = createSlice({
   name: 'auth',

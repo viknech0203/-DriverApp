@@ -1,4 +1,3 @@
-// MainTabs.tsx
 import React from 'react';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import FlightInfoScreen from './FlightInfoScreen';
@@ -8,7 +7,7 @@ import DriverInfo from './DriverInfo';
 
 const Tab = createMaterialTopTabNavigator();
 
-export default function MainTabs() {
+export default function TopTabsNavigator() {
   return (
     <Tab.Navigator
       screenOptions={{

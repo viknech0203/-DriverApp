@@ -11,7 +11,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as DocumentPicker from "expo-document-picker";
 import AppHeader from "./AppHeader";
-import { Driver } from "./types";
+import { Driver,ChatResponse ,InfoResponse } from "./types";
 import { Image } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 
@@ -51,7 +51,7 @@ const Chat: React.FC = () => {
           },
           body: "{}",
         });
-        const data = await resp.json();
+        const data = (await resp.json())as InfoResponse
         if (data?.driver) {
           setDriver(data.driver);
         }
@@ -85,7 +85,7 @@ const Chat: React.FC = () => {
         },
         body: JSON.stringify({}),
       });
-      const data = await resp.json();
+      const data = (await resp.json()) as ChatResponse
       if (data?.chat) {
         const fetchedMessages = data.chat.map((item: any) => ({
           id: item.driver_chat_key
@@ -130,7 +130,8 @@ const Chat: React.FC = () => {
           body: JSON.stringify({ msg: input }),
         });
 
-        const data = await resp.json();
+        const data: ChatResponse = await resp.json() as ChatResponse;
+
         if (data?.chat) {
           const updatedMessages = data.chat.map((item: any) => ({
             id: item.driver_chat_key
@@ -177,7 +178,7 @@ const Chat: React.FC = () => {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-          body: formData,
+          body: formData as any,
         });
 
         const responseData = await response.json().catch(() => ({}));
