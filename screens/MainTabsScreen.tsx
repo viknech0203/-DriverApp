@@ -7,14 +7,15 @@ import Chat from './Chat';
 import FlightStatusScreen from './FlightStatus';
 import DriverInfoScreen from './DriverInfo';
 import { TabsProvider, useTabs } from './TabsContext';
+import { withHeader } from './withHeader';
 
 const initialLayout = { width: Dimensions.get('window').width };
 
 const renderScene = SceneMap({
-  flight: FlightInfoScreen,
-  chat: Chat,
-  status: FlightStatusScreen,
-  driver: DriverInfoScreen,
+  flight: withHeader(FlightInfoScreen, 'Информация о рейсе'),
+  chat: withHeader(Chat, 'Чат'),
+  status: withHeader(FlightStatusScreen, 'Статус рейса'),
+  driver: withHeader(DriverInfoScreen, 'Инфо о водителе'),
 });
 
 function TabWrapper() {

@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import AppHeader from './AppHeader'; // путь правильный
-import { useRoute } from '@react-navigation/native';
+import { useRoute, RouteProp } from '@react-navigation/native';
+import AppHeader from './AppHeader';
+import { RootStackParamList } from './types';
 
 export type Document = {
   name: string;
@@ -15,30 +16,33 @@ export type Driver = {
   docs?: Document[];
 };
 
+// 👇 Указываем тип маршрута для получения параметра driver
+type DriverInfoRouteProp = RouteProp<RootStackParamList, 'DriverInfo'>;
+
 export default function DriverInfo() {
-  const route = useRoute();
-  const raw = route.params?.driver as string | undefined; 
+  const route = useRoute<DriverInfoRouteProp>(); // ✅ Типизированный useRoute
+ const raw = route.params?.driver;
+
+if (!raw) {
+  return (
+    <View style={styles.container}>
+      <Text style={styles.noData}>Нет данных о водителе</Text>
+    </View>
+  );
+}
+
 
   useEffect(() => {
     console.log('=== DriverInfo монтируется ===', raw);
   }, [raw]);
 
-  if (!raw) {
-    return (
-      <View style={styles.container}>
-        <AppHeader screenName="Информация о водителе" status="" driverName="" driver={{ fio: '' }} />
-        <Text style={styles.noData}>Данные о водителе недоступны</Text>
-      </View>
-    );
-  }
-
   let driver: Driver;
   try {
-    driver = JSON.parse(raw);
+    console.log('Сырой параметр driver:', raw);
+    driver = JSON.parse(raw); // Парсим строку в объект
   } catch {
     return (
       <View style={styles.container}>
-        <AppHeader screenName="Информация о водителе" status="" driverName="" driver={{ fio: '' }} />
         <Text style={styles.noData}>Ошибка разбора данных</Text>
       </View>
     );
@@ -46,7 +50,7 @@ export default function DriverInfo() {
 
   return (
     <View style={styles.container}>
-      <AppHeader screenName="Информация о водителе" status="" driverName={driver.fio} driver={driver} />
+   
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.sectionTitle}>Водитель</Text>
         <InfoItem label="ФИО" value={driver.fio} />
@@ -73,8 +77,8 @@ const InfoItem: React.FC<{ label: string; value: string }> = ({ label, value }) 
 );
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' }, // flex:1 чтобы занимал весь экран
-  content: { paddingBottom: 20 }, // добавили отступы для скролла
+  container: { flex: 1, backgroundColor: '#fff' },
+  content: { paddingBottom: 20 },
   sectionTitle: { fontSize: 22, fontWeight: '700', margin: 20 },
   subSectionTitle: { fontSize: 18, fontWeight: '600', marginHorizontal: 20, marginTop: 10 },
   card: {

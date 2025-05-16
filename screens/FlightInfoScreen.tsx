@@ -1,34 +1,24 @@
-// FlightInfoScreen.tsx
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import AppHeader from './AppHeader';
-import DriverInfo, { Driver } from './DriverInfo';
-import { FlightData } from './types';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
+import { fetchFlightInfo } from './api'; 
+import { useNavigation } from '@react-navigation/native'; 
+import { FlightData } from "./types";
+import { RootStackParamList } from './types';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { withHeader } from './withHeader';  // импорт HOC
 
-
-
-export default function FlightInfoScreen() {
+function FlightInfoScreen() {
   const [flightData, setFlightData] = useState<FlightData | null>(null);
   const [loading, setLoading] = useState(true);
+
+  type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'DriverInfo'>;
+  const navigation = useNavigation<NavigationProp>();
 
   useEffect(() => {
     (async () => {
       try {
-        const baseUrl = await AsyncStorage.getItem('base_url');
-        const token = await AsyncStorage.getItem('access_token');
-        if (!baseUrl || !token) {
-          Alert.alert('Ошибка', 'Нет данных для подключения');
-          return;
-        }
-        const resp = await fetch(`${baseUrl}/get_info`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({}),
-        });
-        const data = await resp.json();
-        setFlightData(data as FlightData);
-        
+        const data = await fetchFlightInfo();
+        setFlightData(data);
       } catch (e: any) {
         Alert.alert('Ошибка', e.message || 'Не удалось загрузить данные');
       } finally {
@@ -41,26 +31,22 @@ export default function FlightInfoScreen() {
     return <ActivityIndicator style={{ flex: 1 }} size="large" color="#779DD6" />;
   }
 
-if (!flightData || !flightData.driver || !flightData.route) {
-  return (
-    <View style={styles.container}>
-      <Text style={styles.header}>Данные рейса повреждены или не найдены</Text>
-    </View>
-  );
-}
+  if (!flightData || !flightData.driver || !flightData.route) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.header}>Данные рейса повреждены или не найдены</Text>
+      </View>
+    );
+  }
 
   const { driver, route } = flightData;
 
+  const navigateToDriverInfo = () => {
+    navigation.navigate('DriverInfo', { driver: JSON.stringify(driver) });
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      {/* Передаём driver целиком */}
-<AppHeader
-  screenName="Информация о рейсе"
-  status="Активен"
-  driverName={driver?.fio || 'Неизвестный водитель'}
-  driver={driver}
-/>
-
       <Text style={styles.sectionTitle}>Маршруты</Text>
       {route.map((r, i) => (
         <View key={i} style={styles.routeSection}>
@@ -79,6 +65,10 @@ if (!flightData || !flightData.driver || !flightData.route) {
           ))}
         </View>
       ))}
+
+      <TouchableOpacity style={styles.button} onPress={navigateToDriverInfo}>
+        <Text style={styles.buttonText}>Информация о водителе</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -91,7 +81,7 @@ const InfoItem = ({ label, value }: { label: string; value: string }) => (
 );
 
 const styles = StyleSheet.create({
-  container: { padding: 20, backgroundColor: '#fff' },
+  container: { flex: 1, padding: 20, backgroundColor: '#fff' },
   header: { fontSize: 22, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
   sectionTitle: { fontSize: 20, fontWeight: '700', marginTop: 20, marginBottom: 10, color: '#333' },
   routeSection: { marginTop: 15, borderTopWidth: 1, borderTopColor: '#ccc', paddingTop: 10 },
@@ -99,5 +89,8 @@ const styles = StyleSheet.create({
   item: { marginBottom: 10 },
   label: { fontWeight: '600', fontSize: 16, color: '#444' },
   value: { fontSize: 16, marginTop: 2, color: '#555' },
+  button: { backgroundColor: '#779DD6', padding: 10, borderRadius: 5, marginTop: 20 },
+  buttonText: { color: '#fff', textAlign: 'center', fontSize: 16 },
 });
 
+export default FlightInfoScreen

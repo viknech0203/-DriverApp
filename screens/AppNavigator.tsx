@@ -9,10 +9,11 @@ import Chat from './Chat';
 import FlightStatusScreen from './FlightStatus';
 import DriverInfoScreen from './DriverInfo';
 import MainTabsScreen from './MainTabsScreen';
+import { RootStackParamList } from './types';
 // import TopTabsNavigator from './TopTabsNavigator';
 
 const Drawer = createDrawerNavigator();
-const Stack = createNativeStackNavigator();
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 // Экран с боковым меню
 function DrawerRoutes() {
@@ -28,8 +29,9 @@ export default function AppNavigator() {
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Auth" component={AuthScreen} />
+        <Stack.Screen name="AuthScreen" component={AuthScreen} />
         <Stack.Screen name="Main" component={DrawerRoutes} />
+        <Stack.Screen name="DriverInfo" component={DriverInfoScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

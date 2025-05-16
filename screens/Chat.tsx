@@ -301,14 +301,14 @@ const Chat: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {driver && (
+      {/* {driver && (
         <AppHeader
           screenName="Информация о рейсе"
           status=""
           driverName={driver.fio}
           driver={driver}
         />
-      )}
+      )} */}
 
       <FlatList
         ref={flatListRef}

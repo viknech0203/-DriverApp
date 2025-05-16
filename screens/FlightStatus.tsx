@@ -298,18 +298,12 @@ const FlightStatus: React.FC = () => {
   
 
   return (
-    <SafeAreaView style={styles.container}>
-    {driver && (
-  <AppHeader
-    screenName="Информация о рейсе"
-    status=""
-    driverName={driver.fio}
-    driver={driver}
-  />
-)}
-
-
-      <ScrollView>
+  <SafeAreaView style={styles.container}>
+  <FlatList
+    data={statuses}
+    keyExtractor={(_, i) => i.toString()}
+    ListHeaderComponent={
+      <>
         {/* Дата и время */}
         <Text style={styles.label}>Дата и время</Text>
         <View style={styles.row}>
@@ -326,6 +320,7 @@ const FlightStatus: React.FC = () => {
             <Text style={styles.nowText}>Сейчас</Text>
           </TouchableOpacity>
         </View>
+
         {showDatePicker && (
           <DateTimePicker
             value={date}
@@ -356,8 +351,6 @@ const FlightStatus: React.FC = () => {
             ))}
           </Picker>
         </View>
-
-      
 
         {/* Заказчик */}
         <Text style={styles.label}>Выберите заказчика</Text>
@@ -398,27 +391,25 @@ const FlightStatus: React.FC = () => {
           multiline
         />
 
-<TouchableOpacity style={styles.submitButton} onPress={handleApplyAndSubmit}>
-  <Text style={styles.submitText}>Отправить</Text>
-</TouchableOpacity>
+        <TouchableOpacity style={styles.submitButton} onPress={handleApplyAndSubmit}>
+          <Text style={styles.submitText}>Отправить</Text>
+        </TouchableOpacity>
 
-
-        {/* История */}
         <Text style={styles.historyTitle}>История статусов</Text>
-        <FlatList
-          data={statuses}
-          keyExtractor={(_, i) => i.toString()}
-          renderItem={({ item }) => (
-            <View style={styles.statusItem}>
-              <Text>{item.stamp}</Text>
-              <Text>{item.status}</Text>
-              <Text>Объём: {item.vol}</Text>
-              <Text>{item.text}</Text>
-            </View>
-          )}
-        />
-      </ScrollView>
-    </SafeAreaView>
+      </>
+    }
+    renderItem={({ item }) => (
+      <View style={styles.statusItem}>
+        <Text>{item.stamp}</Text>
+        <Text>{item.status}</Text>
+        <Text>Объём: {item.vol}</Text>
+        <Text>{item.text}</Text>
+      </View>
+    )}
+    contentContainerStyle={{ padding: 16 }} // если нужно отступы
+  />
+</SafeAreaView>
+
   );
 };
 

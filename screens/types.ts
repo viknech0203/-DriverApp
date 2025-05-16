@@ -102,7 +102,7 @@ export type RootStackParamList = {
   FlightInfoScreen: undefined;
   Chat: undefined;
   FlightStatus: undefined;
-  DriverInfo: undefined;
+  DriverInfo: { driver: string };
   Main: undefined;
 };
 
