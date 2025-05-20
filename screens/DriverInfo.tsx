@@ -1,75 +1,53 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { useRoute, RouteProp } from '@react-navigation/native';
-import AppHeader from './AppHeader';
-import { RootStackParamList } from './types';
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 
-export type Document = {
-  name: string;
-  nomer: string;
-  date_from: string;
-  date_to: string;
-};
+export default function DriverInfo({ driver }: { driver: any }) {
+  console.log('Параметр driver в DriverInfo:', driver);
 
-export type Driver = {
-  fio: string;
-  docs?: Document[];
-};
-
-// 👇 Указываем тип маршрута для получения параметра driver
-type DriverInfoRouteProp = RouteProp<RootStackParamList, 'DriverInfo'>;
-
-export default function DriverInfo() {
-  const route = useRoute<DriverInfoRouteProp>(); // ✅ Типизированный useRoute
- const raw = route.params?.driver;
-
-if (!raw) {
-  return (
-    <View style={styles.container}>
-      <Text style={styles.noData}>Нет данных о водителе</Text>
-    </View>
-  );
-}
-
-
-  useEffect(() => {
-    console.log('=== DriverInfo монтируется ===', raw);
-  }, [raw]);
-
-  let driver: Driver;
-  try {
-    console.log('Сырой параметр driver:', raw);
-    driver = JSON.parse(raw); // Парсим строку в объект
-  } catch {
+  if (!driver) {
     return (
       <View style={styles.container}>
-        <Text style={styles.noData}>Ошибка разбора данных</Text>
+        <Text style={styles.noData}>Нет данных о водителе</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-   
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.sectionTitle}>Водитель</Text>
-        <InfoItem label="ФИО" value={driver.fio} />
+      <Text style={styles.sectionTitle}>Водитель</Text>
+      <InfoItem label="ФИО" value={driver.fio || '—'} />
 
-        <Text style={styles.subSectionTitle}>Документы</Text>
-        {driver.docs?.map((doc, i) => (
+      <Text style={styles.subSectionTitle}>Документы</Text>
+      {Array.isArray(driver.docs) && driver.docs.length > 0 ? (
+        driver.docs.map((doc: any, i: number) => (
           <View key={i} style={styles.card}>
-            <InfoItem label="Тип документа" value={doc.name} />
+            <InfoItem label="Тип документа" value={doc.name || '—'} />
             <InfoItem label="Номер" value={doc.nomer || '—'} />
-            <InfoItem label="Действует с" value={doc.date_from} />
-            <InfoItem label="Действует до" value={doc.date_to} />
+            <InfoItem label="Действует с" value={doc.date_from || '—'} />
+            <InfoItem label="Действует до" value={doc.date_to || '—'} />
           </View>
-        ))}
-      </ScrollView>
+        ))
+      ) : (
+        <Text style={styles.noData}>Документы отсутствуют</Text>
+      )}
+
+      {Array.isArray(driver.trips) && driver.trips.length > 0 ? (
+        <>
+          <Text style={styles.subSectionTitle}>Поездки</Text>
+          {driver.trips.map((trip: any, index: number) => (
+            <Text key={trip.id || index} style={styles.tripItem}>
+              {trip.name || 'Без названия'}
+            </Text>
+          ))}
+        </>
+      ) : (
+        <Text style={styles.noData}>Поездки отсутствуют</Text>
+      )}
     </View>
   );
 }
 
-const InfoItem: React.FC<{ label: string; value: string }> = ({ label, value }) => (
+const InfoItem = ({ label, value }: { label: string; value: string }) => (
   <View style={styles.item}>
     <Text style={styles.label}>{label}:</Text>
     <Text style={styles.value}>{value}</Text>
@@ -77,13 +55,17 @@ const InfoItem: React.FC<{ label: string; value: string }> = ({ label, value }) 
 );
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  content: { paddingBottom: 20 },
-  sectionTitle: { fontSize: 22, fontWeight: '700', margin: 20 },
-  subSectionTitle: { fontSize: 18, fontWeight: '600', marginHorizontal: 20, marginTop: 10 },
+  container: { marginTop: 20 },
+  sectionTitle: { fontSize: 22, fontWeight: '700', marginBottom: 10 },
+  subSectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 10,
+    marginBottom: 5,
+  },
   card: {
     backgroundColor: '#f9f9f9',
-    margin: 20,
+    marginTop: 10,
     padding: 15,
     borderRadius: 8,
     borderWidth: 1,
@@ -92,5 +74,12 @@ const styles = StyleSheet.create({
   item: { marginBottom: 8 },
   label: { fontWeight: '600' },
   value: {},
-  noData: { textAlign: 'center', color: '#888', marginTop: 50 },
+  noData: { textAlign: 'center', color: '#888', marginTop: 10 },
+  tripItem: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    backgroundColor: '#eef5ff',
+    marginVertical: 4,
+    borderRadius: 6,
+  },
 });

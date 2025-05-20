@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
     width: screenWidth * 0.3,
     height: screenHeight,
     backgroundColor: 'rgba(0,0,0,0.3)',
-    zIndex: 15,
+    zIndex: 55,
   },
   menuItem: {
     paddingVertical: 12,

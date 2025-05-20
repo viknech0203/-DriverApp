@@ -1,74 +1,110 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
-import { fetchFlightInfo } from './api'; 
-import { useNavigation } from '@react-navigation/native'; 
-import { FlightData } from "./types";
-import { RootStackParamList } from './types';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { withHeader } from './withHeader';  // импорт HOC
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import AppHeader from './AppHeader';
+import DriverInfo from './DriverInfo';
+import { Route, FlightData } from './types';
 
-function FlightInfoScreen() {
+export default function FlightInfoScreen() {
   const [flightData, setFlightData] = useState<FlightData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'DriverInfo'>;
-  const navigation = useNavigation<NavigationProp>();
-
   useEffect(() => {
-    (async () => {
+    const fetchFlightInfo = async () => {
       try {
-        const data = await fetchFlightInfo();
+        const baseUrl = await AsyncStorage.getItem('base_url');
+        const token = await AsyncStorage.getItem('access_token');
+
+        if (!baseUrl || !token) {
+          Alert.alert('Ошибка', 'Не указаны настройки подключения');
+          return;
+        }
+
+        const response = await fetch(`${baseUrl}/get_info`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({}),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data: FlightData = await response.json();
+        console.log('Полученные данные от сервера:', JSON.stringify(data, null, 2));
+
         setFlightData(data);
       } catch (e: any) {
-        Alert.alert('Ошибка', e.message || 'Не удалось загрузить данные');
+        Alert.alert('Ошибка', e.message || 'Не удалось получить данные');
       } finally {
         setLoading(false);
       }
-    })();
+    };
+
+    fetchFlightInfo();
   }, []);
 
   if (loading) {
-    return <ActivityIndicator style={{ flex: 1 }} size="large" color="#779DD6" />;
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#779DD6" />
+      </View>
+    );
   }
 
-  if (!flightData || !flightData.driver || !flightData.route) {
+  if (!flightData) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.header}>Данные рейса повреждены или не найдены</Text>
+      <View style={styles.centered}>
+        <Text>Данные не найдены</Text>
       </View>
     );
   }
 
   const { driver, route } = flightData;
 
-  const navigateToDriverInfo = () => {
-    navigation.navigate('DriverInfo', { driver: JSON.stringify(driver) });
-  };
-
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.sectionTitle}>Маршруты</Text>
-      {route.map((r, i) => (
-        <View key={i} style={styles.routeSection}>
-          <InfoItem label="Автомобиль" value={r.mam} />
-          <InfoItem label="Гос. номер" value={r.nomer} />
-          <InfoItem label="Дата выезда" value={r.date_begin} />
-          <InfoItem label="Дата возвращения" value={r.date_end} />
-          <InfoItem label="Время выезда" value={r.departure.slice(0, 5)} />
-          <InfoItem label="Время прибытия" value={r.arrival.slice(0, 5)} />
-          {r.track.map((t: any, j: number) => (
-            <View key={j} style={styles.trackSection}>
-              <InfoItem label="Клиент" value={t.client} />
-              <InfoItem label="Примечание" value={t.note} />
-              <InfoItem label="Подразделение" value={t.division} />
-            </View>
-          ))}
-        </View>
-      ))}
+      {/* <AppHeader screenName="Информация о рейсе" driverName={driver?.fio} driver={driver} /> */}
 
-      <TouchableOpacity style={styles.button} onPress={navigateToDriverInfo}>
-        <Text style={styles.buttonText}>Информация о водителе</Text>
-      </TouchableOpacity>
+      <Text style={styles.sectionTitle}>Маршруты</Text>
+
+      {Array.isArray(route) && route.length > 0 ? (
+        route.map((r, i) => (
+          <View key={i} style={styles.routeCard}>
+            <InfoItem label="Автомобиль" value={r.mam || '—'} />
+            <InfoItem label="Гос. номер" value={r.nomer || '—'} />
+            <InfoItem label="Дата выезда" value={r.date_begin || '—'} />
+            {r.date_begin !== r.date_end && (
+              <InfoItem label="Дата возвращения" value={r.date_end || '—'} />
+            )}
+            <InfoItem label="Время выезда" value={r.departure?.slice(0, 5) || '—'} />
+            <InfoItem label="Время прибытия" value={r.arrival?.slice(0, 5) || '—'} />
+
+            {Array.isArray(r.track) &&
+              r.track.map((t, j) => (
+                <View key={j} style={styles.trackSection}>
+                  <InfoItem label="Клиент" value={t.client || '—'} />
+                  <InfoItem label="Примечание" value={t.note || '—'} />
+                  <InfoItem label="Подразделение" value={t.division || '—'} />
+                </View>
+              ))}
+          </View>
+        ))
+      ) : (
+        <Text style={{ marginLeft: 16 }}>Нет маршрутов</Text>
+      )}
+
+      <DriverInfo driver={driver} />
     </ScrollView>
   );
 }
@@ -81,16 +117,25 @@ const InfoItem = ({ label, value }: { label: string; value: string }) => (
 );
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#fff' },
-  header: { fontSize: 22, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
-  sectionTitle: { fontSize: 20, fontWeight: '700', marginTop: 20, marginBottom: 10, color: '#333' },
-  routeSection: { marginTop: 15, borderTopWidth: 1, borderTopColor: '#ccc', paddingTop: 10 },
-  trackSection: { marginLeft: 10, marginTop: 10, paddingLeft: 10, borderLeftWidth: 2, borderLeftColor: '#ccc' },
-  item: { marginBottom: 10 },
-  label: { fontWeight: '600', fontSize: 16, color: '#444' },
-  value: { fontSize: 16, marginTop: 2, color: '#555' },
-  button: { backgroundColor: '#779DD6', padding: 10, borderRadius: 5, marginTop: 20 },
-  buttonText: { color: '#fff', textAlign: 'center', fontSize: 16 },
+  container: { paddingBottom: 20 },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  sectionTitle: { fontSize: 20, fontWeight: '700', margin: 16 },
+  routeCard: {
+    backgroundColor: '#f8f8f8',
+    marginHorizontal: 16,
+    marginVertical: 10,
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#ccc',
+  },
+  item: { marginBottom: 6 },
+  label: { fontWeight: '600' },
+  value: {},
+  trackSection: {
+    marginTop: 10,
+    padding: 8,
+    backgroundColor: '#e6f0ff',
+    borderRadius: 8,
+  },
 });
-
-export default FlightInfoScreen
