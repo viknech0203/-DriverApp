@@ -31,6 +31,7 @@ const Chat: React.FC = () => {
   const flatListRef = useRef<FlatList>(null);
   const [driver, setDriver] = useState<Driver | null>(null);
   const [files, setFiles] = useState<any[]>([]);
+  const [lastMessageId, setLastMessageId] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<{
     [key: string]: number;
   }>({});

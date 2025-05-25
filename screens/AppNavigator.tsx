@@ -10,6 +10,7 @@ import FlightStatusScreen from './FlightStatus';
 import DriverInfoScreen from './DriverInfo';
 import MainTabsScreen from './MainTabsScreen';
 import { RootStackParamList } from './types';
+import DriverInfo from './DriverInfo';
 // import TopTabsNavigator from './TopTabsNavigator';
 
 const Drawer = createDrawerNavigator();
@@ -31,7 +32,7 @@ export default function AppNavigator() {
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="AuthScreen" component={AuthScreen} />
         <Stack.Screen name="Main" component={DrawerRoutes} />
-        <Stack.Screen name="DriverInfo" component={DriverInfoScreen} />
+        {/* <Stack.Screen name="DriverInfo" component={DriverInfo} /> */}
       </Stack.Navigator>
     </NavigationContainer>
   );

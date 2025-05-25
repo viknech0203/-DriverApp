@@ -3,7 +3,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Driver } from './DriverInfo';
+import { Driver } from './types';
 import { useTabs } from './TabsContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');

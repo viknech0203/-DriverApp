@@ -16,43 +16,60 @@ export default function FlightInfoScreen() {
   const [flightData, setFlightData] = useState<FlightData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchFlightInfo = async () => {
-      try {
-        const baseUrl = await AsyncStorage.getItem('base_url');
-        const token = await AsyncStorage.getItem('access_token');
+useEffect(() => {
+  let requestCount = 0;
 
-        if (!baseUrl || !token) {
-          Alert.alert('Ошибка', 'Не указаны настройки подключения');
-          return;
-        }
+  const fetchFlightInfo = async () => {
+    requestCount++;
+    const timestamp = new Date().toISOString();
+    console.log(`📡 [${timestamp}] Запрос #${requestCount} — Начало`);
 
-        const response = await fetch(`${baseUrl}/get_info`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({}),
-        });
+    try {
+      const baseUrl = await AsyncStorage.getItem('base_url');
+      const token = await AsyncStorage.getItem('access_token');
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
+      console.log(' baseUrl:', baseUrl);
+      console.log(' token:', token?.slice(0, 10) + '...');
 
-        const data: FlightData = await response.json();
-        console.log('Полученные данные от сервера:', JSON.stringify(data, null, 2));
-
-        setFlightData(data);
-      } catch (e: any) {
-        Alert.alert('Ошибка', e.message || 'Не удалось получить данные');
-      } finally {
-        setLoading(false);
+      if (!baseUrl || !token) {
+        console.warn(' Отсутствуют настройки подключения: baseUrl или token');
+        Alert.alert('Ошибка', 'Не указаны настройки подключения');
+        return;
       }
-    };
 
-    fetchFlightInfo();
-  }, []);
+      const response = await fetch(`${baseUrl}/get_info`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
+      });
+
+      console.log(` HTTP статус: ${response.status}`);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(` Ошибка HTTP: ${response.status} — ${errorText}`);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const data: FlightData = await response.json();
+      console.log(' Полученные данные от сервера:', JSON.stringify(data, null, 2));
+
+      setFlightData(data);
+    } catch (e: any) {
+      console.error(' Ошибка при получении данных:', e.message);
+      Alert.alert('Ошибка', e.message || 'Не удалось получить данные');
+    } finally {
+      setLoading(false);
+      console.log(` [${timestamp}] Запрос #${requestCount} — Завершён\n`);
+    }
+  };
+
+  fetchFlightInfo();
+}, []);
+
 
   if (loading) {
     return (
@@ -69,9 +86,9 @@ export default function FlightInfoScreen() {
       </View>
     );
   }
-
+  console.log('Состояние flightData:', flightData);
   const { driver, route } = flightData;
-
+  console.log('driver, полученный из flightData:', driver);
   return (
     <ScrollView contentContainerStyle={styles.container}>
       {/* <AppHeader screenName="Информация о рейсе" driverName={driver?.fio} driver={driver} /> */}
@@ -104,7 +121,7 @@ export default function FlightInfoScreen() {
         <Text style={{ marginLeft: 16 }}>Нет маршрутов</Text>
       )}
 
-      <DriverInfo driver={driver} />
+      {/* <DriverInfo driver={driver} /> */}
     </ScrollView>
   );
 }
