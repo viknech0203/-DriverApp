@@ -84,7 +84,8 @@ export type SetStatusResponse = {
 };
 
 export interface ChatItem {
-  id: string;
+  id: string; 
+  driver_chat_key: string | number;
   stamp: string;
   chat_msg: string;
   autor: "V" | "D";

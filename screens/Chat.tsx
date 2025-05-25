@@ -70,45 +70,64 @@ const Chat: React.FC = () => {
     }
   }, [messages]);
 
-  const fetchChat = async () => {
-    try {
-      const baseUrl = await AsyncStorage.getItem("base_url");
-      const token = await AsyncStorage.getItem("access_token");
-      if (!baseUrl || !token) {
-        Alert.alert("Ошибка", "Нет данных для подключения");
-        return;
-      }
-      const resp = await fetch(`${baseUrl}/get_chat`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({}),
-      });
-      const data = (await resp.json()) as ChatResponse
-      if (data?.chat) {
-        const fetchedMessages = data.chat.map((item: any) => ({
-          id: item.driver_chat_key
-            ? item.driver_chat_key.toString()
-            : Date.now().toString() + Math.random(),
-          text: item.chat_msg,
-          author: item.autor,
-          stamp: item.stamp,
-        }));
-
-        setMessages(fetchedMessages);
-      }
-    } catch (error: any) {
-      Alert.alert("Ошибка", error.message || "Не удалось загрузить чат");
-    } finally {
-      setLoading(false);
+const fetchChat = async () => {
+  try {
+    const baseUrl = await AsyncStorage.getItem("base_url");
+    const token = await AsyncStorage.getItem("access_token");
+    if (!baseUrl || !token) {
+      Alert.alert("Ошибка", "Нет данных для подключения");
+      return;
     }
-  };
 
-  useEffect(() => {
+    const body = lastMessageId ? { last_id: lastMessageId } : {};
+
+    const resp = await fetch(`${baseUrl}/get_chat`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    const data = (await resp.json()) as ChatResponse;
+
+    if (data?.chat && data.chat.length > 0) {
+      const newMessages = data.chat.map((item: any) => ({
+        id: item.driver_chat_key
+          ? item.driver_chat_key.toString()
+          : Date.now().toString() + Math.random(),
+        text: item.chat_msg,
+        fileName: item.file_name,
+        fileUri: item.file_ ? `data:image/jpeg;base64,${item.file_}` : undefined,
+        author: item.autor,
+        stamp: item.stamp,
+      }));
+
+      setMessages((prev) => [...prev, ...newMessages]);
+
+      // обновляем lastMessageId
+      const newLastId = data.chat[data.chat.length - 1].driver_chat_key?.toString();
+      if (newLastId) setLastMessageId(newLastId);
+    }
+  } catch (error: any) {
+    Alert.alert("Ошибка", error.message || "Не удалось загрузить чат");
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+ useEffect(() => {
+  fetchChat(); // первоначальная загрузка
+
+  const interval = setInterval(() => {
     fetchChat();
-  }, []);
+  }, 10000); // каждые 10 секунд
+
+  return () => clearInterval(interval); // очистка при размонтировании
+}, [lastMessageId]);
+
 
   const sendMessage = async () => {
     const baseUrl = await AsyncStorage.getItem("base_url");
