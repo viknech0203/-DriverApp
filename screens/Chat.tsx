@@ -11,7 +11,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as DocumentPicker from "expo-document-picker";
 import AppHeader from "./AppHeader";
-import { Driver,ChatResponse ,InfoResponse } from "./types";
+import { Driver, ChatResponse, InfoResponse } from "./types";
 import { Image } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 
@@ -32,6 +32,7 @@ const Chat: React.FC = () => {
   const [driver, setDriver] = useState<Driver | null>(null);
   const [files, setFiles] = useState<any[]>([]);
   const [lastMessageId, setLastMessageId] = useState<string | null>(null);
+  const [isAtBottom, setIsAtBottom] = useState(true);
   const [uploadProgress, setUploadProgress] = useState<{
     [key: string]: number;
   }>({});
@@ -52,7 +53,7 @@ const Chat: React.FC = () => {
           },
           body: "{}",
         });
-        const data = (await resp.json())as InfoResponse
+        const data = (await resp.json()) as InfoResponse;
         if (data?.driver) {
           setDriver(data.driver);
         }
@@ -65,69 +66,91 @@ const Chat: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (flatListRef.current) {
+    if (isAtBottom && flatListRef.current) {
       flatListRef.current.scrollToEnd({ animated: true });
     }
   }, [messages]);
 
-const fetchChat = async () => {
-  try {
-    const baseUrl = await AsyncStorage.getItem("base_url");
-    const token = await AsyncStorage.getItem("access_token");
-    if (!baseUrl || !token) {
-      Alert.alert("Ошибка", "Нет данных для подключения");
-      return;
+  const fetchChat = async () => {
+    try {
+      const baseUrl = await AsyncStorage.getItem("base_url");
+      const token = await AsyncStorage.getItem("access_token");
+      if (!baseUrl || !token) {
+        Alert.alert("Ошибка", "Нет данных для подключения");
+        return;
+      }
+
+      const body = lastMessageId ? { last_id: lastMessageId } : {};
+      console.log("Запрос сообщений с last_id:", lastMessageId);
+
+      const resp = await fetch(`${baseUrl}/get_chat`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+
+      const data = (await resp.json()) as ChatResponse;
+
+      if (data?.chat && data.chat.length > 0) {
+        const newMessages = data.chat.map((item: any) => ({
+          id:
+            item.id?.toString() ||
+            item.driver_chat_key?.toString() ||
+            Date.now().toString() + Math.random(),
+          text: item.chat_msg,
+          fileName: item.file_name,
+          fileUri: item.file_
+            ? `data:image/jpeg;base64,${item.file_}`
+            : undefined,
+          author: item.autor,
+          stamp: item.stamp,
+        }));
+
+        setMessages((prev) => {
+          const existingIds = new Set(prev.map((m) => m.id));
+          const uniqueMessages = newMessages.filter(
+            (msg) => !existingIds.has(msg.id)
+          );
+          console.log(
+            `Фильтрация дубликатов: добавлено сообщений ${uniqueMessages.length}`
+          );
+          return [...prev, ...uniqueMessages];
+        });
+
+        const newLastId = data.chat[data.chat.length - 1].id?.toString();
+        if (newLastId) setLastMessageId(newLastId);
+        if (newLastId) {
+          setLastMessageId(newLastId);
+          await AsyncStorage.setItem("last_message_id", newLastId);
+        }
+      }
+    } catch (error: any) {
+      Alert.alert("Ошибка", error.message || "Не удалось загрузить чат");
+    } finally {
+      setLoading(false);
     }
+  };
 
-    const body = lastMessageId ? { last_id: lastMessageId } : {};
+  useEffect(() => {
+    const init = async () => {
+      const storedId = await AsyncStorage.getItem("last_message_id");
+      if (storedId) {
+        setLastMessageId(storedId);
+      }
+      fetchChat(); // после установки last_id
+    };
 
-    const resp = await fetch(`${baseUrl}/get_chat`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
+    init();
 
-    const data = (await resp.json()) as ChatResponse;
+    const interval = setInterval(() => {
+      fetchChat();
+    }, 10000);
 
-    if (data?.chat && data.chat.length > 0) {
-      const newMessages = data.chat.map((item: any) => ({
-        id: item.driver_chat_key
-          ? item.driver_chat_key.toString()
-          : Date.now().toString() + Math.random(),
-        text: item.chat_msg,
-        fileName: item.file_name,
-        fileUri: item.file_ ? `data:image/jpeg;base64,${item.file_}` : undefined,
-        author: item.autor,
-        stamp: item.stamp,
-      }));
-
-      setMessages((prev) => [...prev, ...newMessages]);
-
-      // обновляем lastMessageId
-      const newLastId = data.chat[data.chat.length - 1].driver_chat_key?.toString();
-      if (newLastId) setLastMessageId(newLastId);
-    }
-  } catch (error: any) {
-    Alert.alert("Ошибка", error.message || "Не удалось загрузить чат");
-  } finally {
-    setLoading(false);
-  }
-};
-
-
- useEffect(() => {
-  fetchChat(); // первоначальная загрузка
-
-  const interval = setInterval(() => {
-    fetchChat();
-  }, 10000); // каждые 10 секунд
-
-  return () => clearInterval(interval); // очистка при размонтировании
-}, [lastMessageId]);
-
+    return () => clearInterval(interval);
+  }, []);
 
   const sendMessage = async () => {
     const baseUrl = await AsyncStorage.getItem("base_url");
@@ -150,7 +173,7 @@ const fetchChat = async () => {
           body: JSON.stringify({ msg: input }),
         });
 
-        const data: ChatResponse = await resp.json() as ChatResponse;
+        const data: ChatResponse = (await resp.json()) as ChatResponse;
 
         if (data?.chat) {
           const updatedMessages = data.chat.map((item: any) => ({
@@ -337,8 +360,18 @@ const fetchChat = async () => {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.chatContainer}
         onContentSizeChange={() => {
-        flatListRef.current?.scrollToEnd({ animated: false });
+          flatListRef.current?.scrollToEnd({ animated: false });
         }}
+        onScroll={(event) => {
+          const { layoutMeasurement, contentOffset, contentSize } =
+            event.nativeEvent;
+          const paddingToBottom = 40;
+          const isBottom =
+            layoutMeasurement.height + contentOffset.y >=
+            contentSize.height - paddingToBottom;
+          setIsAtBottom(isBottom);
+        }}
+        scrollEventThrottle={100}
       />
 
       {files.length > 0 && (
