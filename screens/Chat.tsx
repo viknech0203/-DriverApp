@@ -96,7 +96,7 @@ const Chat: React.FC = () => {
       }
 
       const body = lastMessageId ? { last_id: lastMessageId } : {};
-      console.log("📤 Отправляю запрос на /get_chat с last_id:", lastMessageId);
+      console.log(" Отправляю запрос на /get_chat с last_id:", lastMessageId);
 
       const resp = await fetch(`${baseUrl}/get_chat`, {
         method: "POST",
@@ -110,7 +110,7 @@ const Chat: React.FC = () => {
       const data = (await resp.json()) as ChatResponse;
 
       if (data?.chat && data.chat.length > 0) {
-        console.log(`📥 Получено ${data.chat.length} сообщений от сервера:`);
+        console.log(` Получено ${data.chat.length} сообщений от сервера:`);
 
         // Логируем ID всех сообщений
         data.chat.forEach((item, index) => {
@@ -149,14 +149,16 @@ const Chat: React.FC = () => {
           await AsyncStorage.setItem("last_message_id", newLastId);
         }
       } else {
-        console.log("ℹ️ Нет новых сообщений от сервера.");
+        console.log(" Нет новых сообщений от сервера.");
       }
     } catch (error: any) {
-      console.error("❌ Ошибка при получении чата:", error.message || error);
+      console.error(" Ошибка при получении чата:", error.message || error);
       Alert.alert("Ошибка", error.message || "Не удалось загрузить чат");
     } finally {
       setLoading(false);
     }
+    const checkSaved = await AsyncStorage.getItem("last_message_id");
+  console.log(" Проверка сохранения: ", checkSaved);
   };
 
   useEffect(() => {
