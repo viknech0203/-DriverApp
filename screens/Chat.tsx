@@ -24,6 +24,21 @@ type Message = {
   stamp: string;
 };
 
+// утилита для удаления дубликатов сообщений
+const mergeMessagesUniqueById = (
+  oldMessages: Message[],
+  newMessages: Message[]
+): Message[] => {
+  const messageMap = new Map<string, Message>();
+  [...oldMessages, ...newMessages].forEach((msg) => {
+    if (!msg.id) {
+      console.warn(" Сообщение без ID:", msg);
+    }
+    messageMap.set(msg.id, msg); // последнее значение с этим id останется
+  });
+  return Array.from(messageMap.values());
+};
+
 const Chat: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -81,7 +96,7 @@ const Chat: React.FC = () => {
       }
 
       const body = lastMessageId ? { last_id: lastMessageId } : {};
-      console.log("Запрос сообщений с last_id:", lastMessageId);
+      console.log("📤 Отправляю запрос на /get_chat с last_id:", lastMessageId);
 
       const resp = await fetch(`${baseUrl}/get_chat`, {
         method: "POST",
@@ -95,6 +110,16 @@ const Chat: React.FC = () => {
       const data = (await resp.json()) as ChatResponse;
 
       if (data?.chat && data.chat.length > 0) {
+        console.log(`📥 Получено ${data.chat.length} сообщений от сервера:`);
+
+        // Логируем ID всех сообщений
+        data.chat.forEach((item, index) => {
+          const id = item.id?.toString() || item.driver_chat_key?.toString();
+          console.log(
+            `  [${index}] id: ${id}, автор: ${item.autor}, дата: ${item.stamp}`
+          );
+        });
+
         const newMessages = data.chat.map((item: any) => ({
           id:
             item.id?.toString() ||
@@ -110,24 +135,24 @@ const Chat: React.FC = () => {
         }));
 
         setMessages((prev) => {
-          const existingIds = new Set(prev.map((m) => m.id));
-          const uniqueMessages = newMessages.filter(
-            (msg) => !existingIds.has(msg.id)
-          );
+          const combined = mergeMessagesUniqueById(prev, newMessages);
           console.log(
-            `Фильтрация дубликатов: добавлено сообщений ${uniqueMessages.length}`
+            ` Добавлено ${combined.length - prev.length} новых сообщений`
           );
-          return [...prev, ...uniqueMessages];
+          return combined;
         });
 
         const newLastId = data.chat[data.chat.length - 1].id?.toString();
-        if (newLastId) setLastMessageId(newLastId);
         if (newLastId) {
+          console.log(" Новый lastMessageId:", newLastId);
           setLastMessageId(newLastId);
           await AsyncStorage.setItem("last_message_id", newLastId);
         }
+      } else {
+        console.log("ℹ️ Нет новых сообщений от сервера.");
       }
     } catch (error: any) {
+      console.error("❌ Ошибка при получении чата:", error.message || error);
       Alert.alert("Ошибка", error.message || "Не удалось загрузить чат");
     } finally {
       setLoading(false);
@@ -135,21 +160,24 @@ const Chat: React.FC = () => {
   };
 
   useEffect(() => {
+    let interval: any;
+
     const init = async () => {
       const storedId = await AsyncStorage.getItem("last_message_id");
       if (storedId) {
         setLastMessageId(storedId);
       }
-      fetchChat(); // после установки last_id
+      await fetchChat();
+
+      // Запускаем интервал только после первого запроса
+      interval = setInterval(fetchChat, 10000);
     };
 
     init();
 
-    const interval = setInterval(() => {
-      fetchChat();
-    }, 10000);
-
-    return () => clearInterval(interval);
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, []);
 
   const sendMessage = async () => {
@@ -185,7 +213,7 @@ const Chat: React.FC = () => {
             stamp: item.stamp,
           }));
 
-          setMessages(updatedMessages);
+          setMessages((prev) => mergeMessagesUniqueById(prev, updatedMessages));
           setInput("");
         }
       } catch (error: any) {
