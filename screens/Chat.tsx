@@ -14,6 +14,7 @@ import AppHeader from "./AppHeader";
 import { Driver, ChatResponse, InfoResponse } from "./types";
 import { Image } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import { v4 as uuidv4 } from 'uuid';
 
 type Message = {
   id: string;
@@ -24,20 +25,29 @@ type Message = {
   stamp: string;
 };
 
-// утилита для удаления дубликатов сообщений
-const mergeMessagesUniqueById = (
+// Удаление дубликатов по ID (driver_chat_key)
+const mergeMessagesByServerId = (
   oldMessages: Message[],
   newMessages: Message[]
 ): Message[] => {
-  const messageMap = new Map<string, Message>();
-  [...oldMessages, ...newMessages].forEach((msg) => {
-    if (!msg.id) {
-      console.warn(" Сообщение без ID:", msg);
-    }
-    messageMap.set(msg.id, msg); // последнее значение с этим id останется
+  const seen = new Set<string>();
+  const combined = [...oldMessages, ...newMessages];
+
+  const unique = combined.filter((msg) => {
+    if (!msg.id) return false;
+    if (seen.has(msg.id)) return false;
+    seen.add(msg.id);
+    return true;
   });
-  return Array.from(messageMap.values());
+
+  return unique.sort(
+    (a, b) => new Date(a.stamp).getTime() - new Date(b.stamp).getTime()
+  );
 };
+
+
+
+
 
 const Chat: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -120,22 +130,21 @@ const Chat: React.FC = () => {
           );
         });
 
-        const newMessages = data.chat.map((item: any) => ({
-          id:
-            item.id?.toString() ||
-            item.driver_chat_key?.toString() ||
-            Date.now().toString() + Math.random(),
-          text: item.chat_msg,
-          fileName: item.file_name,
-          fileUri: item.file_
-            ? `data:image/jpeg;base64,${item.file_}`
-            : undefined,
-          author: item.autor,
-          stamp: item.stamp,
-        }));
+ const newMessages = data.chat.map((item: any) => ({
+  id: (item.id ?? item.driver_chat_key ?? new Date(item.stamp).getTime()).toString(),
+  text: item.chat_msg,
+  fileName: item.file_name,
+  fileUri: item.file_
+    ? `data:image/jpeg;base64,${item.file_}`
+    : undefined,
+  author: item.autor,
+  stamp: item.stamp,
+}));
+
+
 
         setMessages((prev) => {
-          const combined = mergeMessagesUniqueById(prev, newMessages);
+          const combined = mergeMessagesByServerId(prev, newMessages);
           console.log(
             ` Добавлено ${combined.length - prev.length} новых сообщений`
           );
@@ -182,49 +191,63 @@ const Chat: React.FC = () => {
     };
   }, []);
 
-  const sendMessage = async () => {
-    const baseUrl = await AsyncStorage.getItem("base_url");
-    const token = await AsyncStorage.getItem("access_token");
+ const sendMessage = async () => {
+  const baseUrl = await AsyncStorage.getItem("base_url");
+  const token = await AsyncStorage.getItem("access_token");
 
-    if (!baseUrl || !token) {
-      Alert.alert("Ошибка", "Нет данных для подключения");
-      return;
-    }
+  if (!baseUrl || !token) {
+    Alert.alert("Ошибка", "Нет данных для подключения");
+    return;
+  }
 
-    // Отправка текста
-    if (input.trim()) {
-      try {
-        const resp = await fetch(`${baseUrl}/set_chat`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ msg: input }),
-        });
+  // Отправка текста
+  if (input.trim()) {
+    const tempId = new Date().getTime().toString();
+    const tempMessage: Message = {
+      id: tempId,
+      text: input,
+      author: "V",
+      stamp: new Date().toISOString(),
+    };
 
-        const data: ChatResponse = (await resp.json()) as ChatResponse;
+    // Добавляем временное сообщение
+    setMessages((prev) => [...prev, tempMessage]);
 
-        if (data?.chat) {
-          const updatedMessages = data.chat.map((item: any) => ({
-            id: item.driver_chat_key
-              ? item.driver_chat_key.toString()
-              : Date.now().toString() + Math.random(),
-            text: item.chat_msg,
-            author: item.autor,
-            stamp: item.stamp,
-          }));
+    try {
+      const resp = await fetch(`${baseUrl}/set_chat`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ msg: input }),
+      });
 
-          setMessages((prev) => mergeMessagesUniqueById(prev, updatedMessages));
-          setInput("");
-        }
-      } catch (error: any) {
-        Alert.alert(
-          "Ошибка",
-          error.message || "Не удалось отправить сообщение"
-        );
+      const data: ChatResponse = await resp.json();
+
+      if (data?.chat) {
+ const updatedMessages = data.chat.map((item: any) => ({
+  id: item.driver_chat_key
+    ? item.driver_chat_key.toString()
+    : new Date(item.stamp).getTime().toString(),
+  text: item.chat_msg,
+  author: item.autor,
+  stamp: item.stamp,
+}));
+
+
+       setMessages((prev) => {
+  const filtered = prev.filter((m) => !m.id.startsWith("temp-"));
+  return mergeMessagesByServerId(filtered, updatedMessages);
+});
+
+
+        setInput("");
       }
+    } catch (error: any) {
+      Alert.alert("Ошибка", error.message || "Не удалось отправить сообщение");
     }
+  }
 
     // Отправка файлов
     for (const asset of files) {
@@ -258,16 +281,17 @@ const Chat: React.FC = () => {
         console.log(" Ответ от сервера:", response.status, responseData);
 
         if (response.ok) {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: Date.now().toString(),
-              fileName,
-              fileUri: asset.uri,
-              author: "V",
-              stamp: new Date().toLocaleString(),
-            },
-          ]);
+       setMessages((prev) => [
+  ...prev,
+  {
+    id: new Date().getTime().toString(),
+    fileName,
+    fileUri: asset.uri,
+    author: "V",
+    stamp: new Date().toISOString(),
+  },
+]);
+
         } else {
           Alert.alert("Ошибка", `Файл ${fileName} не отправлен`);
         }
@@ -387,7 +411,9 @@ const Chat: React.FC = () => {
         ref={flatListRef}
         data={messages}
         renderItem={renderItem}
-        keyExtractor={(item) => item.id}
+       keyExtractor={(item) => item.id}
+
+
         contentContainerStyle={styles.chatContainer}
         onContentSizeChange={() => {
           flatListRef.current?.scrollToEnd({ animated: false });
