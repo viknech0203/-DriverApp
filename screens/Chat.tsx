@@ -144,7 +144,8 @@ const Chat: React.FC = () => {
 
 
         setMessages((prev) => {
-          const combined = mergeMessagesByServerId(prev, newMessages);
+          const withoutTemps = prev.filter((m) => !m.id.startsWith("temp-"));
+          const combined = mergeMessagesByServerId(withoutTemps, newMessages);
           console.log(
             ` Добавлено ${combined.length - prev.length} новых сообщений`
           );
@@ -202,7 +203,8 @@ const Chat: React.FC = () => {
 
   // Отправка текста
   if (input.trim()) {
-    const tempId = new Date().getTime().toString();
+    // const tempId = new Date().getTime().toString();
+    const tempId = `temp-${new Date().getTime()}`;
     const tempMessage: Message = {
       id: tempId,
       text: input,
@@ -236,19 +238,19 @@ const Chat: React.FC = () => {
 }));
 
 
-       setMessages((prev) => {
-  const filtered = prev.filter((m) => !m.id.startsWith("temp-"));
-  return mergeMessagesByServerId(filtered, updatedMessages);
-});
 
 
-        setInput("");
-      }
-    } catch (error: any) {
-      Alert.alert("Ошибка", error.message || "Не удалось отправить сообщение");
-    }
+    setMessages((prev) => {
+      const withoutTemp = prev.filter((msg) => !msg.id.startsWith("temp-"));
+      return mergeMessagesByServerId(prev, updatedMessages);
+    });
+
+    setInput(""); // Очищаем поле ввода
   }
-
+} catch (error: any) {
+  Alert.alert("Ошибка", error.message || "Не удалось отправить сообщение");
+}
+  }
     // Отправка файлов
     for (const asset of files) {
       try {
@@ -398,14 +400,7 @@ const Chat: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {/* {driver && (
-        <AppHeader
-          screenName="Информация о рейсе"
-          status=""
-          driverName={driver.fio}
-          driver={driver}
-        />
-      )} */}
+    
 
       <FlatList
         ref={flatListRef}
