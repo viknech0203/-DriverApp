@@ -54,46 +54,53 @@ const baseUrl = `${protocol}://${data.host}:${data.port}/api/v1/driver_mode`;
 );
 
 
-export const loginUser = createAsyncThunk(
+export const loginUser = createAsyncThunk<
+  { accessToken: string; refreshToken: string | null }, // Возвращаемое значение при успехе
+  { login: string; password: string; baseUrl: string }, // Аргументы
+  { rejectValue: string } // Тип ошибки при отклонении
+>(
   'auth/loginUser',
-  async (
-    { login, password, baseUrl }: { login: string; password: string; baseUrl: string },
-    thunkAPI
-  ): Promise<{ accessToken: string; refreshToken: string | null }> => {
-    const response = await fetch(`${baseUrl}/auth`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user: login, password }), // ← обязательно "user", не "login"
-    });
+  async ({ login, password, baseUrl }, thunkAPI) => {
+    try {
+      const response = await fetch(`${baseUrl}/auth`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user: login, password }),
+      });
 
-    if (!response.ok) {
-      throw new Error('Ошибка авторизации');
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Сервер вернул ошибку авторизации:', errorText);
+        return thunkAPI.rejectWithValue(errorText || 'Неверный логин или пароль');
+      }
+
+      const json = await response.json();
+      console.log('Ответ от сервера:', json);
+
+      if (typeof json !== 'object' || json === null || !('token' in json)) {
+        return thunkAPI.rejectWithValue('Токен не получен или структура ответа некорректна');
+      }
+
+      const data: LoginResponse = {
+        token: json.token,
+        refresh: json.refresh ?? null,
+      };
+
+      await AsyncStorage.setItem('access_token', data.token);
+      if (data.refresh) {
+        await AsyncStorage.setItem('refresh_token', data.refresh);
+      }
+
+     return {
+  accessToken: data.token,
+  refreshToken: data.refresh ?? null, 
+};
+    } catch (error: any) {
+      return thunkAPI.rejectWithValue(error.message || 'Ошибка авторизации');
     }
-
-    const json = await response.json();
-
-    // Проверка структуры данных
-    if (typeof json !== 'object' || json === null || !('token' in json)) {
-      throw new Error('Токен не получен или структура ответа некорректна');
-    }
-
-    // Приведение к типу LoginResponse
-    const data: LoginResponse = {
-      token: json.token,
-      refresh: json.refresh ?? null as string | null,
-    };
-
-    await AsyncStorage.setItem('access_token', data.token);
-    if (data.refresh) {
-      await AsyncStorage.setItem('refresh_token', data.refresh);
-    }
-
-    return {
-      accessToken: data.token,
-      refreshToken: data.refresh,
-    };
   }
 );
+
 
 
 
