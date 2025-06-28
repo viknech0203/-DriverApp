@@ -16,7 +16,9 @@
         "foregroundImage": "./src/assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.evlem.myApp"
+      "package": "com.evlem.myApp",
+      "usesCleartextTraffic": true,
+      "permissions": ["INTERNET"]
     },
     "web": {
       "favicon": "./src/assets/images/favicon.png"

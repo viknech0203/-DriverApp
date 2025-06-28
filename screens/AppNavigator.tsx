@@ -4,6 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AuthScreen from 'src/AuthScreen';
+
 import FlightInfoScreen from './FlightInfoScreen';
 import Chat from './Chat';
 import FlightStatusScreen from './FlightStatus';
@@ -11,6 +12,7 @@ import DriverInfoScreen from './DriverInfo';
 import MainTabsScreen from './MainTabsScreen';
 import { RootStackParamList } from './types';
 import DriverInfo from './DriverInfo';
+import InnScreen from '@/InnScreen';
 // import TopTabsNavigator from './TopTabsNavigator';
 
 const Drawer = createDrawerNavigator();
@@ -30,6 +32,7 @@ export default function AppNavigator() {
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="InnScreen" component={InnScreen} />
         <Stack.Screen name="AuthScreen" component={AuthScreen} />
         <Stack.Screen name="Main" component={DrawerRoutes} />
         {/* <Stack.Screen name="DriverInfo" component={DriverInfo} /> */}

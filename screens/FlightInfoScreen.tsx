@@ -22,7 +22,7 @@ useEffect(() => {
   const fetchFlightInfo = async () => {
     requestCount++;
     const timestamp = new Date().toISOString();
-    console.log(`📡 [${timestamp}] Запрос #${requestCount} — Начало`);
+    console.log(` [${timestamp}] Запрос #${requestCount} — Начало`);
 
     try {
       const baseUrl = await AsyncStorage.getItem('base_url');

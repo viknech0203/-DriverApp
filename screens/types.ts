@@ -98,6 +98,7 @@ export interface ChatResponse {
 }
 
 export type RootStackParamList = {
+  InnScreen: undefined;
   AuthScreen: undefined;
   MainTabs: undefined;
   FlightInfoScreen: undefined;

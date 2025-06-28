@@ -24,7 +24,7 @@ const initialState: AuthState = {
 export const fetchServerInfo = createAsyncThunk(
   'auth/fetchServerInfo',
   async (inn: string): Promise<string> => {
-    const response = await fetch('https://app.atp-online.ru/driver_app/get_host.php', {
+    const response = await fetch('http://app.atp-online.ru/driver_app/get_host.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ inn }),
@@ -47,7 +47,9 @@ export const fetchServerInfo = createAsyncThunk(
     }
 
     const protocol = data.is_ssl_port === 1 ? 'https' : 'http';
-    return `${protocol}://${data.host}:${data.port}/api/v1/driver_mode`;
+const baseUrl = `${protocol}://${data.host}:${data.port}/api/v1/driver_mode`;
+
+    return baseUrl;
   }
 );
 
