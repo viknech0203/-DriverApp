@@ -1,7 +1,5 @@
-
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { ServerInfoResponse,LoginResponse  } from '../screens/types';
 
 interface AuthState {
   login: string;
@@ -21,88 +19,142 @@ const initialState: AuthState = {
   refreshToken: null,
 };
 
-export const fetchServerInfo = createAsyncThunk(
-  'auth/fetchServerInfo',
-  async (inn: string): Promise<string> => {
-    const response = await fetch('http://app.atp-online.ru/driver_app/get_host.php', {
+export const loginUser = createAsyncThunk<
+  { accessToken: string; refreshToken: string | null },
+  { login: string; password: string; inn: string },
+  { rejectValue: string }
+>('auth/loginUser', async ({ login, password, inn }, thunkAPI) => {
+  try {
+    console.log('[LOGIN DEBUG] Получаем хост по ИНН:', inn);
+
+    const hostResponse = await fetch('https://app.atp-online.ru/driver_app/get_host.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ inn }),
     });
 
-    const json = await response.json();
-    if (
-      typeof json !== 'object' ||
-      json === null ||
-      !('port' in json) ||
-      typeof (json as any).port !== 'number'
-    )  {
-      throw new Error('Неверный формат ответа сервера');
-    }
+    const hostJson = await hostResponse.json();
+    console.log('[LOGIN DEBUG] Ответ от get_host.php:', hostJson);
 
-    const data = json as ServerInfoResponse;
-
-    if (data.port === 0) {
+    if (!hostJson || hostJson.port === 0 || !hostJson.host) {
       throw new Error('Подключение невозможно. Обратитесь к системному администратору организации');
     }
 
-    const protocol = data.is_ssl_port === 1 ? 'https' : 'http';
-const baseUrl = `${protocol}://${data.host}:${data.port}/api/v1/driver_mode`;
+    const rawHost = {
+      ip: hostJson.host,
+      port: hostJson.port,
+      is_ssl_port: true,
+    };
 
-    return baseUrl;
-  }
-);
+    const hostWithAuthEndpoint = {
+      ...rawHost,
+      endpoint: 'api/v1/driver_mode/auth',
+    };
 
-
-export const loginUser = createAsyncThunk<
-  { accessToken: string; refreshToken: string | null }, // Возвращаемое значение при успехе
-  { login: string; password: string; baseUrl: string }, // Аргументы
-  { rejectValue: string } // Тип ошибки при отклонении
->(
-  'auth/loginUser',
-  async ({ login, password, baseUrl }, thunkAPI) => {
-    try {
-      const response = await fetch(`${baseUrl}/auth`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user: login, password }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Сервер вернул ошибку авторизации:', errorText);
-        return thunkAPI.rejectWithValue(errorText || 'Неверный логин или пароль');
-      }
-
-      const json = await response.json();
-      console.log('Ответ от сервера:', json);
-
-      if (typeof json !== 'object' || json === null || !('token' in json)) {
-        return thunkAPI.rejectWithValue('Токен не получен или структура ответа некорректна');
-      }
-
-      const data: LoginResponse = {
-        token: json.token,
-        refresh: json.refresh ?? null,
-      };
-
-      await AsyncStorage.setItem('access_token', data.token);
-      if (data.refresh) {
-        await AsyncStorage.setItem('refresh_token', data.refresh);
-      }
-
-     return {
-  accessToken: data.token,
-  refreshToken: data.refresh ?? null, 
-};
-    } catch (error: any) {
-      return thunkAPI.rejectWithValue(error.message || 'Ошибка авторизации');
+    //  Проверяем структуру хоста перед отправкой
+    if (
+      typeof hostWithAuthEndpoint !== 'object' ||
+      !hostWithAuthEndpoint.ip ||
+      !hostWithAuthEndpoint.port ||
+      !hostWithAuthEndpoint.endpoint
+    ) {
+      console.error('[LOGIN ERROR] Неверная структура host:', hostWithAuthEndpoint);
+      return thunkAPI.rejectWithValue('Неверная структура параметров подключения (host)');
     }
+
+
+
+      const body = {
+
+  host: {
+    ip: hostJson.host,
+    port: hostJson.port,
+    is_ssl_port: true,
+    endpoint: 'api/v1/driver_mode/auth',
+  },
+  user: login,
+  password,
+};
+
+console.log('[LOGIN DEBUG] Сформированное тело запроса:', JSON.stringify(body, null, 2));
+
+
+
+console.log('[LOGIN DEBUG] Отправляем JSON:', JSON.stringify({
+  user: login,
+  password: password,
+  host: {
+    ip: hostJson.host,
+    port: hostJson.port,
+    is_ssl_port: true,
+    endpoint: 'api/v1/driver_mode/auth',
   }
-);
+}, null, 2));
 
 
 
+
+const response = await fetch('https://app.atp-online.ru/driver_app/get_data.php', {
+  method: 'POST',
+  headers: {
+    // 'Accept': '*/*',
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    user: login,
+    password: password,
+    host: {
+      ip: hostJson.host,
+      port: hostJson.port,
+      is_ssl_port: hostJson.is_ssl_port,
+      endpoint: 'api/v1/driver_mode/auth',
+    }
+  }),
+});
+
+
+const rawText = await response.text();
+console.log('[LOGIN DEBUG] RAW ответ от сервера:', rawText);
+
+let json;
+try {
+  json = JSON.parse(rawText);
+} catch (e) {
+  console.error('[LOGIN ERROR] Невозможно распарсить JSON:', e);
+  return thunkAPI.rejectWithValue('Ошибка при разборе ответа от сервера');
+}
+
+if (!json.token) {
+  console.error('[LOGIN ERROR] Токен не найден в ответе:', json);
+  return thunkAPI.rejectWithValue('Ошибка: токен не получен от сервера');
+}
+
+
+    await AsyncStorage.setItem('access_token', json.token);
+    if (json.refresh) {
+      await AsyncStorage.setItem('refresh_token', json.refresh);
+    }
+
+    //  Сохраняем хост отдельно с endpoint для get_info
+    const hostWithInfoEndpoint = {
+      ...rawHost,
+      endpoint: 'api/v1/driver_mode/get_info',
+    };
+
+    await AsyncStorage.setItem(
+      'server_host',
+      JSON.stringify(hostWithInfoEndpoint)
+    );
+
+    return {
+      accessToken: json.token,
+      refreshToken: json.refresh ?? null,
+    };
+  } catch (err: any) {
+    console.error('[LOGIN ERROR] Ошибка авторизации:', err.message);
+    return thunkAPI.rejectWithValue(err.message || 'Ошибка авторизации');
+  }
+});
 
 const authSlice = createSlice({
   name: 'auth',
@@ -117,6 +169,9 @@ const authSlice = createSlice({
     setInn: (state, action: PayloadAction<string>) => {
       state.inn = action.payload;
     },
+    setBaseUrl: (state, action: PayloadAction<string>) => {
+      state.baseUrl = action.payload;
+    },
     setTokens: (
       state,
       action: PayloadAction<{ accessToken: string; refreshToken: string }>
@@ -126,9 +181,6 @@ const authSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    builder.addCase(fetchServerInfo.fulfilled, (state, action) => {
-      state.baseUrl = action.payload;
-    });
     builder.addCase(loginUser.fulfilled, (state, action) => {
       state.accessToken = action.payload.accessToken;
       state.refreshToken = action.payload.refreshToken;
@@ -136,5 +188,10 @@ const authSlice = createSlice({
   },
 });
 
-export const { setLogin, setPassword, setInn, setTokens } = authSlice.actions;
+export const { setLogin, setPassword, setInn, setBaseUrl, setTokens } = authSlice.actions;
 export default authSlice.reducer;
+
+
+
+
+

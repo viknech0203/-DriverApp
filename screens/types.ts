@@ -118,3 +118,9 @@ export type LoginResponse = {
   token: string;
   refresh?: string;
 };
+
+export interface LoginPayload {
+  login: string;
+  password: string;
+  baseUrl: string; 
+}

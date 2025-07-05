@@ -11,26 +11,40 @@ export function withHeader(Component: React.ComponentType<any>, title: string) {
 
     React.useEffect(() => {
       const loadDriver = async () => {
-        try {
-          const baseUrl = await AsyncStorage.getItem("base_url");
-          const token = await AsyncStorage.getItem("access_token");
-          if (!baseUrl || !token) return;
-          const resp = await fetch(`${baseUrl}/get_info`, {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-            body: "{}",
-          });
-          const data = await resp.json();
-          if (data?.driver) {
-            setDriver(data.driver);
-          }
-        } catch (e) {
-          console.error("Ошибка загрузки водителя:", e);
-        }
-      };
+  try {
+    const token = await AsyncStorage.getItem("access_token");
+    const rawHost = await AsyncStorage.getItem("server_host");
+
+    if (!token || !rawHost) return;
+
+    const hostJson = JSON.parse(rawHost);
+
+    const response = await fetch("https://app.atp-online.ru/driver_app/get_data.php", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        host: {
+          ip: hostJson.ip,
+          port: hostJson.port,
+          is_ssl_port: hostJson.is_ssl_port,
+          endpoint: "api/v1/driver_mode/get_info", // как в примере
+        },
+      }),
+    });
+
+    const data = await response.json();
+
+    if (data?.driver) {
+      setDriver(data.driver);
+    }
+  } catch (e) {
+    console.error("Ошибка загрузки водителя:", e);
+  }
+};
+
       loadDriver();
     }, []);
 

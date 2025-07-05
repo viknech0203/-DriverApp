@@ -8,68 +8,58 @@ import {
   Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import AppHeader from './AppHeader';
-import DriverInfo from './DriverInfo';
 import { Route, FlightData } from './types';
 
 export default function FlightInfoScreen() {
   const [flightData, setFlightData] = useState<FlightData | null>(null);
   const [loading, setLoading] = useState(true);
 
-useEffect(() => {
-  let requestCount = 0;
+  useEffect(() => {
+   const fetchFlightInfo = async () => {
+  try {
+    const token = await AsyncStorage.getItem("access_token");
+    const storedHost = await AsyncStorage.getItem("server_host");
 
-  const fetchFlightInfo = async () => {
-    requestCount++;
-    const timestamp = new Date().toISOString();
-    console.log(` [${timestamp}] Запрос #${requestCount} — Начало`);
-
-    try {
-      const baseUrl = await AsyncStorage.getItem('base_url');
-      const token = await AsyncStorage.getItem('access_token');
-
-      console.log(' baseUrl:', baseUrl);
-      console.log(' token:', token?.slice(0, 10) + '...');
-
-      if (!baseUrl || !token) {
-        console.warn(' Отсутствуют настройки подключения: baseUrl или token');
-        Alert.alert('Ошибка', 'Не указаны настройки подключения');
-        return;
-      }
-
-      const response = await fetch(`${baseUrl}/get_info`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({}),
-      });
-
-      console.log(` HTTP статус: ${response.status}`);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(` Ошибка HTTP: ${response.status} — ${errorText}`);
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
-      }
-
-      const data: FlightData = await response.json();
-      console.log(' Полученные данные от сервера:', JSON.stringify(data, null, 2));
-
-      setFlightData(data);
-    } catch (e: any) {
-      console.error(' Ошибка при получении данных:', e.message);
-      Alert.alert('Ошибка', e.message || 'Не удалось получить данные');
-    } finally {
-      setLoading(false);
-      console.log(` [${timestamp}] Запрос #${requestCount} — Завершён\n`);
+    if (!token || !storedHost) {
+      throw new Error("Нет токена или хоста");
     }
-  };
 
-  fetchFlightInfo();
-}, []);
+    const hostJson = JSON.parse(storedHost);
 
+    const response = await fetch("https://app.atp-online.ru/driver_app/get_data.php", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        host: {
+          ip: hostJson.ip,
+          port: hostJson.port,
+          is_ssl_port: hostJson.is_ssl_port,
+          endpoint: "api/v1/driver_mode/get_info", // аналогично FlightStatus
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Ошибка запроса: ${text}`);
+    }
+
+    const data: FlightData = await response.json();
+    setFlightData(data);
+  } catch (e: any) {
+    console.error("[FlightInfo] Ошибка:", e);
+    Alert.alert("Ошибка", e.message || "Не удалось получить данные");
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+    fetchFlightInfo();
+  }, []);
 
   if (loading) {
     return (
@@ -86,13 +76,11 @@ useEffect(() => {
       </View>
     );
   }
-  console.log('Состояние flightData:', flightData);
+
   const { driver, route } = flightData;
-  console.log('driver, полученный из flightData:', driver);
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      {/* <AppHeader screenName="Информация о рейсе" driverName={driver?.fio} driver={driver} /> */}
-
       <Text style={styles.sectionTitle}>Маршруты</Text>
 
       {Array.isArray(route) && route.length > 0 ? (
@@ -120,8 +108,6 @@ useEffect(() => {
       ) : (
         <Text style={{ marginLeft: 16 }}>Нет маршрутов</Text>
       )}
-
-      {/* <DriverInfo driver={driver} /> */}
     </ScrollView>
   );
 }

@@ -9,30 +9,27 @@ import {
   Alert,
 } from "react-native";
 import { useDispatch } from "react-redux";
-import { fetchServerInfo, setInn } from "../store/authSlice";
 import { useNavigation } from "@react-navigation/native";
 import type { StackNavigationProp } from "@react-navigation/stack";
 import type { RootStackParamList } from "../screens/types";
 import type { AppDispatch } from "../store/store";
+import { setInn } from "store/authSlice";
 
 const InnScreen: React.FC = () => {
   const [inn, setInnValue] = useState("");
   const dispatch = useDispatch<AppDispatch>();
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
 
-  const handleSubmit = async () => {
-    try {
-      const baseUrl = await dispatch(fetchServerInfo(inn)).unwrap();
-      dispatch(setInn(inn));
-      console.log("baseUrl установлен:", baseUrl);
-      navigation.navigate("AuthScreen"); // переход к экрану логина
-    } catch (error: any) {
-      Alert.alert(
-        "Ошибка",
-        error.message || "Не удалось получить информацию о сервере"
-      );
-    }
-  };
+ const handleSubmit = async () => {
+  if (!inn.trim()) {
+    Alert.alert("Ошибка", "Введите ИНН");
+    return;
+  }
+
+  dispatch(setInn(inn)); // просто сохраняем ИНН в store
+  navigation.navigate("AuthScreen"); // переходим к логину
+};
+
 
   return (
     <SafeAreaView style={styles.container}>
